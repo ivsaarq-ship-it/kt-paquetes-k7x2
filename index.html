@@ -1255,7 +1255,7 @@ function resumenPaquetesTexto(){
   return 'Hola, te comparto los paquetes de '+D.negocio.nombre+' para '+inv+' invitados el '+fechaLarga(fecha)+':\n\n'+L.join('\n')+'\n\nEl depósito es reembolsable 48 h después del evento si todo está en orden.'+(pt?' Para esta fecha se liquida el total al apartar.':(pc?' Anticipo de '+pc+' % para apartar tu fecha.':''))+' Precios sin IVA; si requieres factura se suma 16 % de IVA.';
 }
 function ownerPaq(){
-  if(!canAdmin||!S.fecha)return '';
+  if(!(canAdmin||MODO_DUENO)||!S.fecha)return '';
   var listo=pqC.k===pqClave()&&!!pqC.r,dir=!pqModoPDF&&pqPuedeCompartir();
   setTimeout(function(){try{if(document.getElementById('pq-btn'))pqArmar().then(pqListo).catch(function(e){pqStatus('No se pudieron preparar los paquetes: '+(e&&e.message?e.message:'intenta de nuevo.'));});}catch(e){}},300);
   var h='<section class="ownerbox"><h2>🔒 Solo para ti</h2><p class="hint" style="margin:0 0 10px">Manda a tu cliente los 3 paquetes (básico, banquete y GALA) con paquete, depósito y total para '+S.invitados+' invitados el '+esc(fechaLarga(S.fecha).toLowerCase())+'. Tu cliente no ve este recuadro.</p>';
@@ -1733,6 +1733,7 @@ app.addEventListener('change',function(e){if(e.target.id==='inv'){var tv=parseIn
 app.addEventListener('toggle',function(e){var d=e.target;if(d&&d.dataset&&d.dataset.ig){if(d.open)igOpen[d.dataset.ig]=1;else delete igOpen[d.dataset.ig];}if(d&&d.dataset&&d.dataset.pk){if(d.open)openPk[d.dataset.pk]=1;else delete openPk[d.dataset.pk];}if(d&&d.dataset&&d.dataset.cat){openCat[d.dataset.cat]=d.open;}},true);
 
 /* ---------- administración ---------- */
+var MODO_DUENO=true;
 var ART=null,canAdmin=false,A=null,adm=null,USR=null,EDITOR=false;
 var RKEY='kalli-recibos-v1';
 function cargarRecibos(){try{var r=localStorage.getItem(RKEY);var arr=r?JSON.parse(r):[];return Array.isArray(arr)?arr:[];}catch(e){return [];}}
