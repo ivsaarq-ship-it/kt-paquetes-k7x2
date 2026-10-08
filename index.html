@@ -1733,7 +1733,7 @@ app.addEventListener('change',function(e){if(e.target.id==='inv'){var tv=parseIn
 app.addEventListener('toggle',function(e){var d=e.target;if(d&&d.dataset&&d.dataset.ig){if(d.open)igOpen[d.dataset.ig]=1;else delete igOpen[d.dataset.ig];}if(d&&d.dataset&&d.dataset.pk){if(d.open)openPk[d.dataset.pk]=1;else delete openPk[d.dataset.pk];}if(d&&d.dataset&&d.dataset.cat){openCat[d.dataset.cat]=d.open;}},true);
 
 /* ---------- administración ---------- */
-var MODO_DUENO=true;
+var MODO_DUENO=(function(){var m=/[?&]dueno=([01])(&|$)/.exec(location.search);try{if(m){if(m[1]==='1')localStorage.setItem('kalli-dueno','1');else localStorage.removeItem('kalli-dueno');}return localStorage.getItem('kalli-dueno')==='1';}catch(e){return !!m&&m[1]==='1';}})();
 var ART=null,canAdmin=false,A=null,adm=null,USR=null,EDITOR=false;
 var RKEY='kalli-recibos-v1';
 function cargarRecibos(){try{var r=localStorage.getItem(RKEY);var arr=r?JSON.parse(r):[];return Array.isArray(arr)?arr:[];}catch(e){return [];}}
