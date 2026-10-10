@@ -205,6 +205,7 @@ details.cat>.items{margin-top:12px}
 .calc-line s{color:var(--ink-3)}
 .note{display:block;font-size:.82rem;color:var(--ink-2);margin-top:2px}
 details summary{cursor:pointer;color:var(--agave);font-weight:600;font-size:.93rem;padding-block:2px}
+.gate-acts{display:grid;gap:10px}
 .incl{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:.92rem;color:var(--ink-2)}
 .incl li{display:flex;gap:10px}
 .incl li::before{content:"";flex:none;width:6px;height:6px;margin-top:.6em;border-radius:50%;background:var(--gold)}
@@ -546,6 +547,7 @@ function tierFecha(fechaStr){
   if(d>=media)return 'media';
   return 'cerca';
 }
+function soloBasico(p,fechaStr){return !!p&&!!p.comida&&tierFecha(fechaStr===undefined?S.fecha:fechaStr)==='cerca';}
 function puedeReservar(fechaStr){return tierFecha(fechaStr)!=='cerca';}
 function requierePagoTotal(fechaStr){return tierFecha(fechaStr)!=='lejos';}
 function gcalStamp(dt){return String(dt.getFullYear())+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0')+'T'+String(dt.getHours()).padStart(2,'0')+String(dt.getMinutes()).padStart(2,'0')+'00';}
@@ -644,7 +646,11 @@ function esMejora(it){return !!it&&it.grupo==='comida-banquete'&&(+(it.pe!=null?
 function paxOk(it){return !(it.paxMin!=null&&S.invitados<it.paxMin)&&!(it.paxMax!=null&&S.invitados>it.paxMax);}
 function minPaxComidaDia(f){var R=D.reglas||{},base=+R.minPaxComida||50,sem=(R.minPaxComidaSemana!=null&&R.minPaxComidaSemana!=='')?+R.minPaxComidaSemana:30,m=(f&&diaTipo(f)==='semana'&&sem>0)?Math.min(base,sem):base;return Math.max(m,f?minInvitadosDia(f):0);}
 function minPax(p){return p&&p.minComida?minPaxComidaDia(S.fecha):minInvitadosDia(S.fecha);}
-function limpiarExtrasFueraDeRango(){Object.keys(S.items).forEach(function(id){var it=item(id);if(it&&!paxOk(it))delete S.items[id];});}
+/* Fechas muy próximas: solo extras propios de la terraza (servicios y loza); los de proveedores externos no alcanzan a confirmarse */
+var EXTRAS_PROPIOS=['Servicios','Loza y mantelería'];
+function extraCercaBloq(it){return tierFecha(S.fecha)==='cerca'&&EXTRAS_PROPIOS.indexOf(it.categoria)<0&&!incluido(it,pkg(S.paquete));}
+function extraOk(it){return paxOk(it)&&!extraCercaBloq(it);}
+function limpiarExtrasFueraDeRango(){Object.keys(S.items).forEach(function(id){var it=item(id);if(it&&!extraOk(it))delete S.items[id];});}
 /* Opciones a elegir dentro de un extra (ej. guisados de la taquiza) */
 function limpiarOpc(){
   if(!S.opc||typeof S.opc!=='object')S.opc={};
@@ -809,7 +815,7 @@ if(D.horarios.indexOf(S.horario)<0)S.horario=nuevoEstado().horario;
 Object.keys(S.items||{}).forEach(function(id){if(!item(id))delete S.items[id];});
 limpiarOpc();
 S.invitados=Math.min(capacidad(),Math.max(minInvitadosDia(S.fecha),+S.invitados||100));
-if(S.paquete){var ppq=pkg(S.paquete);if(ppq&&ppq.minComida&&S.invitados<minPaxComidaDia(S.fecha))S.paquete=null;}
+if(S.paquete){var ppq=pkg(S.paquete);if(ppq&&((ppq.minComida&&S.invitados<minPaxComidaDia(S.fecha))||soloBasico(ppq)))S.paquete=null;}
 limpiarExtrasFueraDeRango();
 (function(){var m=parse(S.mes||iso(minFecha()));var min=new Date(hoy.getFullYear(),hoy.getMonth(),1);if(m<min||m>maxFecha()){var f=minFecha();S.mes=iso(new Date(f.getFullYear(),f.getMonth(),1));}})();
 S.step=Math.min(+S.step||0,maxStep());
@@ -832,7 +838,7 @@ function depositoModal(pid){
 }
 
 function maxStep(){if(!S.fecha)return 0;if(!S.paquete)return 2;return 4;}
-function setInv(v){var mn=minInvitadosDia(S.fecha);S.invitados=Math.min(capacidad(),Math.max(mn,Math.round(+v||mn)));if(S.paquete){var ppq=pkg(S.paquete);if(ppq&&ppq.minComida&&S.invitados<minPaxComidaDia(S.fecha))S.paquete=null;}limpiarExtrasFueraDeRango();}
+function setInv(v){var mn=minInvitadosDia(S.fecha);S.invitados=Math.min(capacidad(),Math.max(mn,Math.round(+v||mn)));if(S.paquete){var ppq=pkg(S.paquete);if(ppq&&((ppq.minComida&&S.invitados<minPaxComidaDia(S.fecha))||soloBasico(ppq)))S.paquete=null;}limpiarExtrasFueraDeRango();}
 /* Solo la hora extra del lugar alarga el evento; mariachi, norteño u horas extra de mesero no */
 function horasExtra(){var p=pkg(S.paquete);return Object.keys(S.items).reduce(function(a,id){var it=item(id);return a+(it&&it.unidad==='hora'&&(it.id==='horaextra'||it.extiendeHorario)&&!incluido(it,p)?S.items[id]:0);},0);}
 /* Límite del permiso (3:00 am): cuántas horas extra caben según la hora de inicio y el paquete */
@@ -1231,7 +1237,8 @@ function v2(){
     var estP=estacionamientoAuto(inv);
 
     var minReq=p.minComida?minPaxComidaDia(S.fecha):0;
-    var bloqueado=minReq&&inv<minReq;
+    var cercaBloq=soloBasico(p);
+    var bloqueado=(minReq&&inv<minReq)||cercaBloq;
     if(p.formula==='dia'){
       if(chico){
         priceBlock='<div class="price"><span class="big">A cotizar</span><span class="unit">grupos chicos entre semana · por WhatsApp</span></div>';
@@ -1257,10 +1264,10 @@ function v2(){
       priceBlock+calcLine+(p.comida?'<p class="note">Precio informativo: la comida puede cambiar por el proveedor. Te confirmamos por WhatsApp.</p>':'')+
       (inc.length?'<details data-pk="'+esc(p.id)+'"'+(openPk[p.id]?' open':'')+'><summary>Qué incluye</summary><ul class="incl">'+inc.map(function(x){return /:$/.test(x.trim())?'<li class="incl-h">'+esc(x)+'</li>':'<li>'+esc(x)+'</li>';}).join('')+'</ul></details>':'')+
       (depositoTexto(false,p,inv)?'<p class="note dep-note">'+esc(depositoTexto(false,p,inv))+'</p>':'')+
-      '<button type="button" class="btn '+(sel&&!bloqueado?'btn-chosen':'btn-line')+'" data-pkg="'+esc(p.id)+'" aria-pressed="'+(sel&&!bloqueado)+'"'+(bloqueado?' disabled aria-disabled="true"':'')+'>'+(bloqueado?'Necesita más invitados':sel?'Paquete elegido':'Elegir este paquete')+'</button>'+
+      '<button type="button" class="btn '+(sel&&!bloqueado?'btn-chosen':'btn-line')+'" data-pkg="'+esc(p.id)+'" aria-pressed="'+(sel&&!bloqueado)+'"'+(bloqueado?' disabled aria-disabled="true"':'')+'>'+(cercaBloq?'No disponible para esta fecha':bloqueado?'Necesita más invitados':sel?'Paquete elegido':'Elegir este paquete')+'</button>'+
     '</article>';
   }).join('');
-  return '<section class="intro intro-sm"><h1>Elige tu paquete</h1><p>Precios para '+inv+' invitados'+(S.fecha?' · '+fechaLarga(S.fecha).toLowerCase():'')+'.</p>'+tarifasHTML()+'</section>'+ownerPaq()+'<div class="pkgs">'+list+'</div>'+cmpPaquetes();
+  return '<section class="intro intro-sm"><h1>Elige tu paquete</h1><p>Precios para '+inv+' invitados'+(S.fecha?' · '+fechaLarga(S.fecha).toLowerCase():'')+'.</p>'+(tierFecha(S.fecha)==='cerca'&&D.paquetes.some(function(p){return p.activo!==false&&p.comida;})?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días te ofrecemos el <strong>Paquete básico</strong>: la terraza ya tiene todo listo. Los paquetes con comida necesitan más anticipación.</p>':'')+tarifasHTML()+'</section>'+ownerPaq()+'<div class="pkgs">'+list+'</div>'+cmpPaquetes();
 }
 function resumenPaquetesTexto(){
   var inv=S.invitados,fecha=S.fecha,L=[],pc=null,pt=false;
@@ -1411,11 +1418,11 @@ function opcHTML(it){
 }
 function v3(){
   var p=pkg(S.paquete),inv=S.invitados,cats=[];
-  D.items.filter(function(i){return i.activo!==false&&visibleEnPaquete(i,p);}).forEach(function(i){var cn=esMejora(i)?'Mejora tu comida':i.categoria;var c=cats.find(function(c){return c.n===cn;});if(!c){c={n:cn,l:[]};cats.push(c);}c.l.push(i);});
+  D.items.filter(function(i){return i.activo!==false&&visibleEnPaquete(i,p)&&!extraCercaBloq(i);}).forEach(function(i){var cn=esMejora(i)?'Mejora tu comida':i.categoria;var c=cats.find(function(c){return c.n===cn;});if(!c){c={n:cn,l:[]};cats.push(c);}c.l.push(i);});
   var nav=cats.length>1?'<div class="chips cat-nav">'+cats.map(function(c){return '<button type="button" class="chip sm" data-catgo="'+esc('cat-'+c.n)+'" data-catid="cat-'+slug(c.n)+'">'+esc(c.n)+'</button>';}).join('')+'</div>':'';
-  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Agrega lo que quieras. Precios para tus '+inv+' invitados, antes de IVA; debajo de cada uno verás el precio con IVA. Lo incluido en tu paquete ya viene marcado.</p>'+nav+'</section>'+
+  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Agrega lo que quieras. Precios para tus '+inv+' invitados, antes de IVA; debajo de cada uno verás el precio con IVA. Lo incluido en tu paquete ya viene marcado.</p>'+(tierFecha(S.fecha)==='cerca'?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días solo mostramos los servicios de la terraza. Música, comida, decoración y demás proveedores necesitan más anticipación; si los necesitas, llámanos y vemos si alguno está libre.</p>':'')+nav+'</section>'+
     cats.map(function(c,ci){
-      var visibles=c.l.filter(paxOk);
+      var visibles=c.l.filter(extraOk);
       var relevante=ci===0||(ci===1&&cats[0].n==='Estilo de banquete');
       visibles=visibles.slice().sort(function(a,b){
         var ta=a.etiqueta?0:1,tb=b.etiqueta?0:1;if(ta!==tb)return ta-tb;
@@ -1424,7 +1431,7 @@ function v3(){
         return ra-rb;
       });
       var grupos={};c.l.forEach(function(it){if(it.grupo)(grupos[it.grupo]=grupos[it.grupo]||[]).push(it);});
-      var avisos=Object.keys(grupos).filter(function(g){return !grupos[g].some(paxOk);});
+      var avisos=tierFecha(S.fecha)==='cerca'?[]:Object.keys(grupos).filter(function(g){return !grupos[g].some(paxOk);});
       if(!visibles.length&&!avisos.length)return '';
       var elegidos=c.l.filter(function(it){return (S.items[it.id]||0)>0;}).length;
       var key='cat-'+c.n,abierta=openCat.hasOwnProperty(key)?!!openCat[key]:(relevante||elegidos>0);
@@ -1448,7 +1455,8 @@ function v4Aviso(){
   var n=D.negocio;
   return '<section class="intro intro-sm"><h1>Antes de continuar</h1></section>'+
     '<p class="fine fine-urgent fine-gate">Por ser una fecha próxima, esta cotización solo aparta tu lugar por '+(+D.reglas.holdHorasCercano||2)+' horas. Llámanos o escríbenos cuanto antes al '+telVisible(n.whatsapp)+' para confirmarla de inmediato.</p>'+
-    '<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Ponte en contacto</a>';
+    '<div class="gate-acts"><a class="btn btn-main" href="'+esc(telContacto())+'">📞 Llámanos ahora</a>'+
+    '<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></div>';
 }
 function v4(){
   if(esContactoChico())return v4Chico();
@@ -1612,6 +1620,7 @@ function faltanNombres(){return itemsConOpc().filter(function(it){return opcResu
 function telOk(v){var t=String(v||'').replace(/\D/g,'');if(t.length===13&&t.indexOf('521')===0)t=t.slice(3);else if(t.length===12&&t.indexOf('52')===0)t=t.slice(2);return t.length===10&&t.charAt(0)!=='0'&&!/^(\d)\1{9}$/.test(t);}
 function nomLimpio(){return String(S.nombre||'').replace(/[*_~`<>]/g,'').replace(/\s+/g,' ').trim().slice(0,60);}
 function datosOk(){return nomLimpio().length>=2&&telOk(S.telefono);}
+function telContacto(){return 'tel:+'+String(D.negocio.whatsapp).replace(/\D/g,'');}
 function validSend(){return datosOk()&&(esContactoChico()||(!!S.terms&&!faltaOpc()));}
 function waContacto(){return 'https://wa.me/'+String(D.negocio.whatsapp).replace(/\D/g,'')+'?text='+encodeURIComponent('Hola, '+D.negocio.nombre+'. Quiero confirmar la fecha'+(S.fecha?' '+fechaLarga(S.fecha):'')+'.');}
 function waUrl(){return 'https://wa.me/'+String(D.negocio.whatsapp).replace(/\D/g,'')+'?text='+encodeURIComponent(mensaje());}
