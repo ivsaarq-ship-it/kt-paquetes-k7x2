@@ -4,7 +4,8 @@ Sitio de una sola página: `index.html` + `fotos/`. Dueño: Sergio (arquitecto, 
 
 ## Cómo responder
 - Usar el estilo **Hiperpragmatico** (`.claude/output-styles/hiperpragmatico.md`).
-- Seguir la habilidad **metodo-sergio**: decisiones en `metodo/decisiones.md`, estado y pendientes en `metodo/resumen.md`.
+- Seguir la habilidad **metodo-sergio**. Método, decisiones y pendientes viven **solo** en el repo privado `ivsaarq-ship-it/kalli-app` (`docs/metodo.md`, `docs/decisiones.md`, `docs/resumen.md`). Este repo es **público**: nunca guardar aquí costos, márgenes, precios internos ni datos de clientes.
+- `index.html` = copia del dueño, generada con `tools/mkowner.py` del repo kalli-app. No editar a mano.
 
 ## Cómo trabajar
 - Problemas de varios pasos: usar el servidor MCP `sequential-thinking` (en `.mcp.json`).
