@@ -8,5 +8,6 @@ Sitio de una sola página: `index.html` + `fotos/`. Dueño: Sergio (arquitecto, 
 
 ## Cómo trabajar
 - Problemas de varios pasos: usar el servidor MCP `sequential-thinking` (en `.mcp.json`).
-- Antes de decir "listo": abrir `index.html` en Chromium (Playwright) y revisar a ancho de celular.
+- Diseño de pantallas: usar la habilidad `frontend-design`.
+- Antes de decir "listo": abrir `index.html` con el MCP `playwright` y revisar a ancho de celular.
 - Algo delicado (precios, datos personales, borrar, publicar): 3 líneas antes — qué cambia, qué verá, cómo se deshace.

@@ -8,4 +8,4 @@
 - Pendiente de proponer.
 
 ## Pendientes
-- P2 · Herramientas · decidir si instalar complementos frontend-design y playwright · Sergio.
+- Hecho: frontend-design y playwright instalados en el proyecto (2026-10-10).
