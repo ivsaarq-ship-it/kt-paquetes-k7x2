@@ -646,7 +646,11 @@ function esMejora(it){return !!it&&it.grupo==='comida-banquete'&&(+(it.pe!=null?
 function paxOk(it){return !(it.paxMin!=null&&S.invitados<it.paxMin)&&!(it.paxMax!=null&&S.invitados>it.paxMax);}
 function minPaxComidaDia(f){var R=D.reglas||{},base=+R.minPaxComida||50,sem=(R.minPaxComidaSemana!=null&&R.minPaxComidaSemana!=='')?+R.minPaxComidaSemana:30,m=(f&&diaTipo(f)==='semana'&&sem>0)?Math.min(base,sem):base;return Math.max(m,f?minInvitadosDia(f):0);}
 function minPax(p){return p&&p.minComida?minPaxComidaDia(S.fecha):minInvitadosDia(S.fecha);}
-function limpiarExtrasFueraDeRango(){Object.keys(S.items).forEach(function(id){var it=item(id);if(it&&!paxOk(it))delete S.items[id];});}
+/* Fechas muy próximas: solo extras propios de la terraza (servicios y loza); los de proveedores externos no alcanzan a confirmarse */
+var EXTRAS_PROPIOS=['Servicios','Loza y mantelería'];
+function extraCercaBloq(it){return tierFecha(S.fecha)==='cerca'&&EXTRAS_PROPIOS.indexOf(it.categoria)<0&&!incluido(it,pkg(S.paquete));}
+function extraOk(it){return paxOk(it)&&!extraCercaBloq(it);}
+function limpiarExtrasFueraDeRango(){Object.keys(S.items).forEach(function(id){var it=item(id);if(it&&!extraOk(it))delete S.items[id];});}
 /* Opciones a elegir dentro de un extra (ej. guisados de la taquiza) */
 function limpiarOpc(){
   if(!S.opc||typeof S.opc!=='object')S.opc={};
@@ -1415,11 +1419,11 @@ function opcHTML(it){
 }
 function v3(){
   var p=pkg(S.paquete),inv=S.invitados,cats=[];
-  D.items.filter(function(i){return i.activo!==false&&visibleEnPaquete(i,p);}).forEach(function(i){var cn=esMejora(i)?'Mejora tu comida':i.categoria;var c=cats.find(function(c){return c.n===cn;});if(!c){c={n:cn,l:[]};cats.push(c);}c.l.push(i);});
+  D.items.filter(function(i){return i.activo!==false&&visibleEnPaquete(i,p)&&!extraCercaBloq(i);}).forEach(function(i){var cn=esMejora(i)?'Mejora tu comida':i.categoria;var c=cats.find(function(c){return c.n===cn;});if(!c){c={n:cn,l:[]};cats.push(c);}c.l.push(i);});
   var nav=cats.length>1?'<div class="chips cat-nav">'+cats.map(function(c){return '<button type="button" class="chip sm" data-catgo="'+esc('cat-'+c.n)+'" data-catid="cat-'+slug(c.n)+'">'+esc(c.n)+'</button>';}).join('')+'</div>':'';
-  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Agrega lo que quieras. Precios para tus '+inv+' invitados, antes de IVA; debajo de cada uno verás el precio con IVA. Lo incluido en tu paquete ya viene marcado.</p>'+nav+'</section>'+
+  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Agrega lo que quieras. Precios para tus '+inv+' invitados, antes de IVA; debajo de cada uno verás el precio con IVA. Lo incluido en tu paquete ya viene marcado.</p>'+(tierFecha(S.fecha)==='cerca'?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días solo mostramos los servicios de la terraza. Música, comida, decoración y demás proveedores necesitan más anticipación; si los necesitas, llámanos y vemos si alguno está libre.</p>':'')+nav+'</section>'+
     cats.map(function(c,ci){
-      var visibles=c.l.filter(paxOk);
+      var visibles=c.l.filter(extraOk);
       var relevante=ci===0||(ci===1&&cats[0].n==='Estilo de banquete');
       visibles=visibles.slice().sort(function(a,b){
         var ta=a.etiqueta?0:1,tb=b.etiqueta?0:1;if(ta!==tb)return ta-tb;
@@ -1428,7 +1432,7 @@ function v3(){
         return ra-rb;
       });
       var grupos={};c.l.forEach(function(it){if(it.grupo)(grupos[it.grupo]=grupos[it.grupo]||[]).push(it);});
-      var avisos=Object.keys(grupos).filter(function(g){return !grupos[g].some(paxOk);});
+      var avisos=tierFecha(S.fecha)==='cerca'?[]:Object.keys(grupos).filter(function(g){return !grupos[g].some(paxOk);});
       if(!visibles.length&&!avisos.length)return '';
       var elegidos=c.l.filter(function(it){return (S.items[it.id]||0)>0;}).length;
       var key='cat-'+c.n,abierta=openCat.hasOwnProperty(key)?!!openCat[key]:(relevante||elegidos>0);
