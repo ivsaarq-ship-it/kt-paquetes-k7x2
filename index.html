@@ -319,6 +319,7 @@ details summary{cursor:pointer;color:var(--agave);font-weight:600;font-size:.93r
 .fine{margin:0;padding:12px 16px;background:var(--surface-2);font-size:.82rem;color:var(--ink-2)}
 .fine-urgent{background:var(--busy-soft);color:var(--busy);font-weight:600}
 .fine-gate{border-radius:var(--r);margin-bottom:14px}
+.gate-acts{display:grid;gap:10px}
 
 /* formulario */
 .form{display:grid;gap:14px}
@@ -1447,7 +1448,8 @@ function v4Aviso(){
   var n=D.negocio;
   return '<section class="intro intro-sm"><h1>Antes de continuar</h1></section>'+
     '<p class="fine fine-urgent fine-gate">Por ser una fecha próxima, esta cotización solo aparta tu lugar por '+(+D.reglas.holdHorasCercano||2)+' horas. Llámanos o escríbenos cuanto antes al '+telVisible(n.whatsapp)+' para confirmarla de inmediato.</p>'+
-    '<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Ponte en contacto</a>';
+    '<div class="gate-acts"><a class="btn btn-main" href="'+esc(telContacto())+'">📞 Llámanos ahora</a>'+
+    '<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></div>';
 }
 function v4(){
   if(esContactoChico())return v4Chico();
@@ -1611,6 +1613,7 @@ function telOk(v){var t=String(v||'').replace(/\D/g,'');if(t.length===13&&t.inde
 function nomLimpio(){return String(S.nombre||'').replace(/[*_~`<>]/g,'').replace(/\s+/g,' ').trim().slice(0,60);}
 function datosOk(){return nomLimpio().length>=2&&telOk(S.telefono);}
 function validSend(){return datosOk()&&(esContactoChico()||(!!S.terms&&!faltaOpc()));}
+function telContacto(){return 'tel:+'+String(D.negocio.whatsapp).replace(/\D/g,'');}
 function waContacto(){return 'https://wa.me/'+String(D.negocio.whatsapp).replace(/\D/g,'')+'?text='+encodeURIComponent('Hola, '+D.negocio.nombre+'. Quiero confirmar la fecha'+(S.fecha?' '+fechaLarga(S.fecha):'')+'.');}
 function waUrl(){return 'https://wa.me/'+String(D.negocio.whatsapp).replace(/\D/g,'')+'?text='+encodeURIComponent(mensaje());}
 function updateSend(){
