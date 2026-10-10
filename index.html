@@ -1246,7 +1246,7 @@ function v2(){
       }else{
         var rv=calcRentaVenue(inv,S.fecha),extra=previewAuto(p,inv),tot=rv.total+extra;
         priceBlock='<div class="price"><span class="big">'+fmt(Math.round(tot))+'</span><span class="unit">para '+inv+' invitados · '+(+p.horas)+' h'+(+p.cortesia?' + '+p.cortesia+' de cortesía':'')+'</span>'+ivaSpan(Math.round(tot))+'</div>';
-        calcLine=bloqueado?'<p class="note" style="color:var(--busy);margin:0">Requiere mínimo '+minReq+' invitados (tienes '+inv+').</p>':'';
+        calcLine='';
       }
     }else{
       var n=p.tipo==='persona'?Math.max(inv,+p.minimo||0):0;
@@ -1454,9 +1454,10 @@ function v4Chico(){
 function v4Aviso(){
   var n=D.negocio;
   return '<section class="intro intro-sm"><h1>Antes de continuar</h1></section>'+
-    '<p class="fine fine-urgent fine-gate">Por ser una fecha próxima, esta cotización solo aparta tu lugar por '+(+D.reglas.holdHorasCercano||2)+' horas. Llámanos o escríbenos cuanto antes al '+telVisible(n.whatsapp)+' para confirmarla de inmediato.</p>'+
-    '<div class="gate-acts"><a class="btn btn-main" href="'+esc(telContacto())+'">📞 Llámanos ahora</a>'+
-    '<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></div>';
+    '<p class="fine fine-urgent fine-gate">Fecha próxima: solo la apartamos '+(+D.reglas.holdHorasCercano||2)+' horas. Llámanos o escríbenos ya.</p>'+
+    '<div class="gate-acts"><a class="btn btn-main" href="'+esc(telContacto())+'" data-copy="llamar">📞 Llamar al '+telVisible(n.whatsapp)+'</a>'+
+    '<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></div>'+
+    '<p class="hint">Si no se abre tu teléfono, el número queda copiado: pégalo para llamar.</p>';
 }
 function v4(){
   if(esContactoChico())return v4Chico();
@@ -1772,6 +1773,7 @@ app.addEventListener('click',function(e){
   if(ds.origen!==undefined){S.origen=S.origen===ds.origen?null:ds.origen;render(fs);return;}
   if(ds.copy){
     var n=D.negocio,txt=ds.copy==='msg'?mensaje():ds.copy==='num'?telVisible(n.whatsapp):ds.copy==='folio'?S.folio:ds.copy==='clabe2'?String((n.banco2||{}).clabe||''):String((n.banco||{}).clabe||'');
+    if(ds.copy==='llamar'){copiar(telVisible(n.whatsapp),'Número copiado: '+telVisible(n.whatsapp)+'. Pégalo para llamar.');return;}
     copiar(txt,ds.copy==='msg'?'Cotización copiada':'Copiado');return;
   }
   if('reset' in ds){S.confirmReset=true;render('[data-reset-no]');return;}
