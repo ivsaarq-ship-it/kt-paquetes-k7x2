@@ -2015,8 +2015,8 @@ function reciboResumen(r){
   var est={apartado:'Apartado',confirmado:'Confirmado',pagado:'Pagado'}[r.estado]||'Apartado';
   return {total:total,abono:abono,saldo:saldo,lim:lim,dias:dias,estado:est};
 }
-function recCompacto(r){return {in:r.ineNombre||'',dm:r.ineDomicilio||'',ce:r.ineClave||'',vg:r.ineVigencia||'',w:r.telefono||'',c:r.cliente||'',f:r.folio||'',p:reciboPaquete(r)||'',d:r.fecha||'',h:r.horario||'',t:r.tipo||'',i:r.invitados||'',l:(r.lineas||[]).filter(function(l){return l.nombre;}).map(function(l){return [l.nombre,+l.monto||0];}),a:+r.abono||0,e:r.estado||'apartado',k:!!r.comprobanteOk};}
-function recExpandir(o){return {ineNombre:o.in||'',ineDomicilio:o.dm||'',ineClave:o.ce||'',ineVigencia:o.vg||'',telefono:o.w||'',cliente:o.c,folio:o.f,paquete:o.p,fecha:o.d,horario:o.h,tipo:o.t,invitados:o.i,lineas:(o.l||[]).map(function(x){return {nombre:x[0],detalle:'',monto:+x[1]||0};}),abono:+o.a||0,estado:o.e,comprobanteOk:!!o.k};}
+function recCompacto(r){return {in:r.ineNombre||'',dm:r.ineDomicilio||'',ce:r.ineClave||'',vg:r.ineVigencia||'',w:r.telefono||'',c:r.cliente||'',f:r.folio||'',p:reciboPaquete(r)||'',d:r.fecha||'',h:r.horario||'',t:r.tipo||'',i:r.invitados||'',l:(r.lineas||[]).filter(function(l){return l.nombre;}).map(function(l){return [l.nombre,+l.monto||0];}),a:+r.abono||0,e:r.estado||'apartado',k:!!r.comprobanteOk,o:!!r.ineOk};}
+function recExpandir(o){return {ineNombre:o.in||'',ineDomicilio:o.dm||'',ineClave:o.ce||'',ineVigencia:o.vg||'',telefono:o.w||'',cliente:o.c,folio:o.f,paquete:o.p,fecha:o.d,horario:o.h,tipo:o.t,invitados:o.i,lineas:(o.l||[]).map(function(x){return {nombre:x[0],detalle:'',monto:+x[1]||0};}),abono:+o.a||0,estado:o.e,comprobanteOk:!!o.k,ineOk:!!o.o};}
 function recB64(o){var s=unescape(encodeURIComponent(JSON.stringify(o)));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function recEnviarUrl(r){var u=String((D.negocio&&D.negocio.urlHerramienta)||'https://ivsaarq-ship-it.github.io/kt-paquetes-k7x2/');if(!/^https:\/\//i.test(u))u='https://ivsaarq-ship-it.github.io/kt-paquetes-k7x2/';return u.split('#')[0].split('?')[0]+'#rec='+recB64(recCompacto(r));}
 function admRecibos(){
@@ -2032,7 +2032,7 @@ function admRecibos(){
       (vacio?'':'<div class="rc-grid">'+rNum('Abono recibido',i,'abono',r.abono,'min="0"')+rSel('Estado',i,'estado',r.estado,[['apartado','Apartado'],['confirmado','Confirmado'],['pagado','Pagado']])+'</div>'+
         rChk('Ya vi su comprobante de pago',i,'comprobanteOk',r.comprobanteOk)+
         rChk('Ya vi su INE vigente (frente y reverso)',i,'ineOk',r.ineOk)+contratoEstadoHtml(r,i)+
-        '<a class="btn btn-wa" id="rc-send-'+i+'" href="'+esc(recEnviarUrl(r))+'" target="_blank" rel="noopener">Enviar recibo y contrato'+(r.cliente?' a '+esc(String(r.cliente).split(' ')[0]):'')+'</a>'+
+        '<a class="btn btn-wa" id="rc-send-'+i+'" href="'+esc(recEnviarUrl(r))+'" target="_blank" rel="noopener">Enviar '+(contratoCompleto(r)?'recibo y contrato final':'cotización y contrato base')+(r.cliente?' a '+esc(String(r.cliente).split(' ')[0]):'')+'</a>'+
         '<div class="rc-act">'+(fechaISODeTexto(r.fecha)?'<a class="btn btn-line sm" href="'+esc(gcalPuente(gcalRecibo(r)))+'" target="_blank" rel="noopener">📅 Agendar</a>':'')+(R.saldo>0&&waResena(r.telefono)?'<a class="btn btn-line sm" href="'+esc(waRecordatorioPago(r,R.saldo))+'" target="_blank" rel="noopener">Recordar pago</a>':'')+
           '<button type="button" class="btn btn-ghost sm" data-a="recibo-editar" data-i="'+i+'">'+(edit?'Cerrar edición':'Editar datos')+'</button>'+
           '<button type="button" class="btn btn-ghost sm" data-a="recibo-mas" data-i="'+i+'">'+(mas?'Menos':'Más opciones')+'</button></div>')+
@@ -2618,8 +2618,9 @@ function parseIne(txt){txt=String(txt||'');function c(re){var m=txt.match(re);re
   var o={ineNombre:c(/\*Nombre \(INE\):\*\s*(.+)/),ineDomicilio:c(/\*Domicilio \(INE\):\*\s*(.+)/),ineClave:c(/\*Clave de elector:\*\s*(.+)/).toUpperCase(),ineVigencia:c(/\*INE vigente hasta:\*\s*(\d{4})/),telefono:c(/\*WhatsApp:\*\s*(.+)/),folio:c(/\*Folio:\*\s*(.+)/)};
   return (o.ineNombre||o.ineClave)?o:null;}
 function ineVigente(v){return /^\d{4}$/.test(String(v||''))&&+v>=hoy.getFullYear();}
+function contratoCompleto(r){return +r.abono>0&&!!(r.ineNombre&&r.ineClave&&r.ineDomicilio)&&ineVigente(r.ineVigencia)&&!!r.ineOk;}
 function contratoEstadoHtml(r,i){
-  var ab=+r.abono>0,ine=!!(r.ineNombre&&r.ineClave&&r.ineDomicilio),vig=ine&&ineVigente(r.ineVigencia),ok=ab&&vig&&r.ineOk;
+  var ab=+r.abono>0,ine=!!(r.ineNombre&&r.ineClave&&r.ineDomicilio),vig=ine&&ineVigente(r.ineVigencia),ok=contratoCompleto(r);
   function m(b){return b?'✅':'⬜';}
   return '<div class="rc-ct" style="display:grid;gap:8px;margin:4px 0"><p class="hint" style="margin:0">Contrato: '+m(ab)+' anticipo · '+m(ine)+' datos del INE'+(ine&&!vig?' <b style="color:var(--busy)">(INE no vigente)</b>':'')+' · '+m(r.ineOk)+' INE revisada</p>'+
     '<label class="btn btn-line sm" style="cursor:pointer">📷 Leer INE de las fotos<input type="file" accept="image/*" multiple hidden data-ine-leer="'+i+'"></label>'+
@@ -2654,7 +2655,7 @@ async function leerIne(i,files){
     refreshFoot();
   }
 }
-function contratoNombre(r){return 'Contrato-'+(r.folio||'kalli')+'.pdf';}
+function contratoNombre(r){return 'Contrato'+(contratoCompleto(r)?'':'-base')+'-'+(r.folio||'kalli')+'.pdf';}
 function contratoCampos(r){
   var n=D.negocio,R=reciboResumen(r),h=String(r.horario||''),hs=+((h.match(/\((\d+)\s*h\)/)||[])[1]||0),cs=+((h.match(/\+\s*(\d+)\s*h/)||[])[1]||0);
   var dep=(r.lineas||[]).filter(function(l){return /^dep[oó]sito/i.test(normTxt(l.nombre));}).reduce(function(a,l){return a+(+l.monto||0);},0)||(+n.depositoGarantia||0);
@@ -2685,6 +2686,12 @@ async function construirContratoPDF(r){
   y=104;doc.setDrawColor(PUR[0],PUR[1],PUR[2]);doc.setLineWidth(1);doc.line(M,y,W-M,y);y+=24;
   font('bold',13);col(INK);doc.splitTextToSize(K.titulo||'Contrato de prestación de servicios',W-M*2).forEach(function(l){doc.text(l,W/2,y,{align:'center'});y+=17;});
   font('normal',9.5);col(MUTE);doc.text('Folio '+c.folio+(K.registroProfeco?' · Registro Profeco '+K.registroProfeco:''),W/2,y,{align:'center'});y+=24;
+  var base=!contratoCompleto(r);
+  if(base){
+    font('bold',10);var bt=doc.splitTextToSize('CONTRATO BASE PARA TU REVISIÓN. Lleva los datos de tu cotización y no se firma. Cuando recibamos tu anticipo y tu INE vigente (frente y reverso) te mandamos este contrato con tus datos completos para tu firma.',W-M*2-24);
+    doc.setFillColor(250,235,211);doc.setDrawColor(228,190,132);doc.rect(M,y-4,W-M*2,bt.length*13+14,'FD');
+    font('bold',10);col([42,25,4]);doc.text(bt,M+12,y+12,{lineHeightFactor:1.25});y+=bt.length*13+26;
+  }
   function clausula(tit,txt){font('bold',10);var tw=doc.getTextWidth(tit+' ');
     font('normal',10);var w=doc.splitTextToSize(txt,W-M*2-tw);var rest=w.length>1?doc.splitTextToSize(w.slice(1).join(' '),W-M*2):[];
     salto(16);font('bold',10);col(INK);doc.text(tit,M,y);font('normal',10);doc.text(w[0]||'',M+tw,y);y+=14;
@@ -2692,11 +2699,12 @@ async function construirContratoPDF(r){
   clausula('Partes.',contratoTxt(K.partes,c));
   y+=4;font('bold',10.5);col(PUR);doc.text('Cláusulas',M,y);y+=16;
   (K.clausulas||[]).forEach(function(cl,k){clausula((k+1)+'. '+cl.t+'.',contratoTxt(cl.x,c));});
-  salto(130);y+=30;doc.setDrawColor(INK[0],INK[1],INK[2]);doc.setLineWidth(0.7);
+  if(base){y+=14;parrafo('Firmas: se firman en el contrato completo, con tus datos de INE.',9.5,'bold',MUTE,6);}
+  else{salto(130);y+=30;doc.setDrawColor(INK[0],INK[1],INK[2]);doc.setLineWidth(0.7);
   var cw=(W-M*2-40)/2;doc.line(M,y,M+cw,y);doc.line(W-M-cw,y,W-M,y);y+=14;
   font('bold',9.5);col(INK);doc.text(c.proveedor,M+cw/2,y,{align:'center'});doc.text(c.cliente,W-M-cw/2,y,{align:'center'});y+=12;
   font('normal',9);col(MUTE);doc.text('La Terraza',M+cw/2,y,{align:'center'});doc.text('El Cliente',W-M-cw/2,y,{align:'center'});y+=26;
-  parrafo('Lugar y fecha de firma: ______________________________',9.5,'normal',INK,4);
+  parrafo('Lugar y fecha de firma: ______________________________',9.5,'normal',INK,4);}
   parrafo(contratoTxt(K.anexos,c),9,'normal',MUTE,0);
   /* Anexo 1: condiciones y reglamento de uso */
   y+=22;salto(90);font('bold',12);col(INK);doc.text('Anexo 1. Condiciones y reglamento de uso',M,y);y+=20;
@@ -2707,7 +2715,7 @@ async function construirContratoPDF(r){
   if(dn.length){salto(60);y+=14;font('bold',12);col(INK);doc.text('Anexo 2. Reglamento de daños (costo de reposición)',M,y);y+=18;
     dn.forEach(function(d){salto(16);font('normal',9.5);col(INK);doc.text(doc.splitTextToSize(d.concepto,W-M*2-140)[0],M,y);doc.text(+d.precio>0?fmt(+d.precio):(d.nota||'Según costo real'),W-M,y,{align:'right'});y+=6;doc.setDrawColor(220,220,220);doc.setLineWidth(0.5);doc.line(M,y,W-M,y);y+=10;});}
   var np=doc.internal.getNumberOfPages();
-  for(var pg=1;pg<=np;pg++){doc.setPage(pg);font('normal',8);col(MUTE);doc.text((n.nombre||'')+' · Folio '+c.folio+' · Página '+pg+' de '+np,W/2,H-24,{align:'center'});}
+  for(var pg=1;pg<=np;pg++){doc.setPage(pg);font('normal',8);col(MUTE);doc.text((n.nombre||'')+' · Folio '+c.folio+(base?' · CONTRATO BASE PARA REVISIÓN':'')+' · Página '+pg+' de '+np,W/2,H-24,{align:'center'});}
   return doc;
 }
 async function generarContratoPDF(r){
@@ -2944,7 +2952,7 @@ function recPuente(){
   var nom='Recibo-'+(r.folio||'kalli')+'.jpg';
   if(ver){recVista(r,nom);return true;}
   app.innerHTML='<main class="wrap stack" style="padding-top:18px;padding-bottom:40px"><section class="block"><h2 style="margin:0 0 6px">Recibo de '+esc(r.cliente||'tu cliente')+'</h2><p class="hint" id="rc-st" style="margin:0 0 4px">Preparando el recibo…</p><p class="hint" id="rc-st2" style="margin:0 0 12px">Preparando el contrato…</p>'+
-    '<div style="display:grid;gap:10px;margin:0 0 14px"><button type="button" class="btn btn-wa" id="rc-send" disabled>1. Enviar recibo (imagen)</button><button type="button" class="btn btn-wa" id="rc-send2" disabled>2. Enviar contrato (PDF)</button>'+
+    '<div style="display:grid;gap:10px;margin:0 0 14px"><button type="button" class="btn btn-wa" id="rc-send" disabled>1. Enviar '+(+r.abono>0?'recibo de pago':'cotización')+' (imagen)</button><button type="button" class="btn btn-wa" id="rc-send2" disabled>2. Enviar contrato '+(contratoCompleto(r)?'para firma':'base')+' (PDF)</button>'+
     '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-line sm" id="rc-dl" download="'+esc(nom)+'">Guardar imagen</a><a class="btn btn-line sm" id="rc-dl2" download="'+esc(contratoNombre(r))+'" hidden>Guardar contrato</a></div></div>'+
     '<img id="rc-img" alt="Recibo" style="width:100%;border-radius:12px;border:1px solid var(--line);display:none">'+
     '<p class="hint">Cada botón abre WhatsApp: elige el chat de tu cliente (el mismo en los dos). Para regresar a Kalli, cierra esta pestaña con la X de arriba.</p></section></main>';
@@ -2958,7 +2966,7 @@ function recPuente(){
   dibujarReciboImg(r).then(function(blob){
     var url=URL.createObjectURL(blob),file=null;try{file=new File([blob],nom,{type:'image/jpeg'});}catch(e){}
     im.src=url;im.style.display='block';dl.href=url;b1.disabled=false;st.textContent='Recibo listo.';
-    b1.onclick=function(){compartir(file,msgRecibo(r),st,'Recibo enviado. Ahora toca «2. Enviar contrato» y elige el mismo chat.');};
+    b1.onclick=function(){compartir(file,msgRecibo(r),st,(+r.abono>0?'Recibo enviado':'Cotización enviada')+'. Ahora toca «2» y elige el mismo chat.');};
   }).catch(function(e){st.textContent='No se pudo crear la imagen: '+(e&&e.message?e.message:'intenta de nuevo.');});
   construirContratoPDF(r).then(function(doc){
     var pb=doc.output('blob'),pf=null;try{pf=new File([pb],contratoNombre(r),{type:'application/pdf'});}catch(e){}
@@ -2969,8 +2977,12 @@ function recPuente(){
 }
 function waTel(tel){var t=String(tel||'').replace(/\D/g,'');if(t.length===10)t='52'+t;if(t.length===13&&t.indexOf('521')===0)t='52'+t.slice(3);return t.length>=11?t:'';}
 function ineUrl(r){return recEnviarUrl({}).split('#')[0]+'#ine='+encodeURIComponent(r.folio||'kalli');}
-function msgRecibo(r){return 'Hola'+(r.cliente?' '+String(r.cliente).split(' ')[0]:'')+', te comparto tu recibo de '+D.negocio.nombre+(r.folio?' (folio '+r.folio+')':'')+'.';}
-function msgContrato(r){return 'Hola'+(r.cliente?' '+String(r.cliente).split(' ')[0]:'')+', te comparto tu contrato de '+D.negocio.nombre+(r.folio?' (folio '+r.folio+')':'')+'.'+(r.ineNombre&&r.ineClave?'\n\nYa lleva los datos de tu INE. Revísalo, imprímelo y fírmalo.':'\n\nPara completarlo, sube tu INE vigente (frente y reverso) aquí: '+ineUrl(r));}
+function msgPrimer(r){return 'Hola'+(r.cliente?' '+String(r.cliente).split(' ')[0]:'')+', ';}
+function msgRecibo(r){return msgPrimer(r)+'te comparto tu '+(+r.abono>0?'recibo de pago':'cotización')+' de '+D.negocio.nombre+(r.folio?' (folio '+r.folio+')':'')+'.';}
+function msgContrato(r){
+  if(contratoCompleto(r))return msgPrimer(r)+'aquí está tu contrato con tus datos completos (folio '+(r.folio||'—')+'). Revísalo, imprímelo, fírmalo y mándanos una foto por este chat.';
+  return msgPrimer(r)+'te comparto tu contrato base para que lo revises: lleva los datos de tu cotización (folio '+(r.folio||'—')+').\n\nCuando recibamos tu anticipo y tu INE vigente (2 fotos, frente y reverso, por este chat) te mandamos el contrato con tus datos completos para tu firma.';
+}
 function recVerUrl(r){return recEnviarUrl(r).replace('#rec=','#ver=');}
 function waReciboCliente(r){var t=waTel(r.telefono),R=reciboResumen(r);if(!t)return '';
   var m='Hola'+(r.cliente?' '+String(r.cliente).split(' ')[0]:'')+', este es tu recibo de '+D.negocio.nombre+(r.folio?' (folio '+r.folio+')':'')+'.\n\n*Total:* '+fmt(R.total)+'\n*Abonado:* '+fmt(R.abono)+'\n*Saldo:* '+fmt(R.saldo)+'\n\nTu recibo y tu contrato: '+recVerUrl(r)+'\n\n'+(r.ineNombre&&r.ineClave?'Tu contrato ya lleva los datos de tu INE.':'Para tu contrato necesitamos tu *INE vigente por ambos lados*. Súbela en ese mismo link.');
