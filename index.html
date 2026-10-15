@@ -3537,7 +3537,6 @@ function aplicarApartadoDesdeLink(fecha,horas,nota,extrasJSON,info){
 function updHeaderBtn(){var row=app.querySelector('.brand-btns');if(row&&!row.querySelector('[data-admin]'))row.insertAdjacentHTML('afterbegin','<button type="button" class="adm-btn" data-admin>Admin</button>');}
 
 if(recPuente())return;
-try{if(/\.github\.io$/i.test(location.hostname)&&window.top===window.self&&!KCAL){location.replace(appUrl());return;}}catch(e){}
 render();
 iniciarAdmin();
 })();
