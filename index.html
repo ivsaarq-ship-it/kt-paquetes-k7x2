@@ -457,6 +457,8 @@ details summary{cursor:pointer;color:var(--agave);font-weight:600;font-size:.93r
 .rc{gap:10px}.rc-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.rc-top small{font-weight:400;color:var(--ink-3);font-size:.8rem}.rc-chip{font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--gold-soft);color:var(--ink);white-space:nowrap}.rc-chip.rc-confirmado{background:var(--agave-soft);color:var(--agave)}.rc-chip.rc-pagado{background:var(--agave);color:#fff}.rc-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--surface-2);border-radius:10px;padding:10px}.rc-nums span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:700}.rc-nums b{font-size:1rem;font-variant-numeric:tabular-nums}.rc-debe{color:var(--busy)}.rc-ok{color:var(--agave)}.rc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.rc-act,.rc-mas{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rc-mas{padding-top:6px;border-top:1px dashed var(--line)}.rc-edit{display:grid;gap:10px;padding-top:8px;border-top:1px dashed var(--line)}.rc-det summary{font-size:.9rem}.rc-det[open]{display:grid;gap:10px}
 .rc-mas-wrap{position:relative;height:0;overflow:visible}.rc-mas-wrap .rc-mas{position:absolute;top:2px;right:0;z-index:30;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;gap:2px;width:min(310px,88vw);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px}.rc-mas-wrap .rc-mas .btn{justify-content:flex-start;width:100%;min-height:40px}.rc-mas-wrap .ed-ctl{padding:4px 6px;grid-column:1/-1}.rc-mas-wrap .rc-mas .btn{font-size:.82rem;padding:0 8px;text-align:left}
 .warn{font-size:.85rem;color:var(--ink-2);background:var(--surface-2);border-radius:10px;padding:10px 12px;margin:10px 0 0}
+/* pie de Admin compacto para que el menú «Más» se vea completo */
+.adm-foot{padding-block:6px calc(6px + env(safe-area-inset-bottom,0px))}.adm-foot-in{flex-wrap:nowrap;gap:8px}.adm-foot .adm-status{font-size:.78rem;line-height:1.25;flex:1 1 auto;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.adm-foot .adm-btns{flex:none;flex-wrap:nowrap;gap:4px}.adm-foot .btn.sm{min-height:36px;padding:0 10px;font-size:.82rem}
 
 /* Áreas táctiles de 44 px (mínimo recomendado en celular) sin cambiar el diseño */
 .btn.sm,.btn-ghost.sm:not(.terms-ok *),.chip,.nav,.btn.bk{min-height:44px}
@@ -2691,7 +2693,7 @@ function contratoEstadoHtml(r,i){
   ineInputGlobal().dataset.i=i;
   var subir='<button type="button" class="btn '+(ab&&!r.ineNombre?'btn-main':'btn-line')+' sm" data-a="ine-subir" data-i="'+i+'">📷 '+(r.ineNombre?'Volver a subir INE':'Subir INE (2 fotos)')+'</button>';
   var imsg=(A.ineMsg&&A.ineMsg[r.id])||'';
-  if(A.ineLast&&A.ineLast[r.id]&&!(r.ineNombre&&r.ineClave&&r.ineDomicilio))subir+='<button type="button" class="btn btn-main sm" data-a="ine-reintentar" data-i="'+i+'">↻ Reintentar con las mismas fotos</button>';
+  if(((A.ineLast&&A.ineLast[r.id])||ineUlt(r.id))&&!(r.ineNombre&&r.ineClave&&r.ineDomicilio))subir+='<button type="button" class="btn btn-main sm" data-a="ine-reintentar" data-i="'+i+'">↻ Reintentar con las mismas fotos</button>';
   if(ab&&!r.ineNombre&&!A.permAsked){A.permAsked=1;setTimeout(function(){try{if(window.claude&&typeof window.claude.use==='function')window.claude.use('permissions').then(function(pm){if(pm&&pm.request)pm.request(['sample']).catch(function(){});}).catch(function(){});}catch(e){}},400);}
   var h='<div class="rc-ct" style="display:grid;gap:8px;margin:4px 0"><p class="hint" style="margin:0">Contrato: '+m(ab)+' anticipo · '+m(ine)+' INE · '+m(r.ineOk)+' autorizado</p>';
   if(r.ineNombre&&!r.ineOk){
@@ -2765,8 +2767,20 @@ async function comprimirIne(files){var out=[];for(var k=0;k<files.length&&k<2;k+
 function fotoB64(du){return String(du||'').replace(/^data:image\/jpeg;base64,/,'').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function fotoDeB64(b){b=String(b||'').replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';return b?'data:image/jpeg;base64,'+b:'';}
 /* Lee las fotos de la INE con Claude (cuenta del dueño; pide permiso la primera vez). No se guarda nada en la nube: solo en el recibo de este celular. */
+function inePendGuardar(id,du){var o={id:id,du:du,t:Date.now(),n:(inePend()&&inePend().id===id?inePend().n:0)||0};try{localStorage.setItem('kalli-ine-pend',JSON.stringify(o));localStorage.setItem('kalli-ine-ult',JSON.stringify({id:id,du:du}));}catch(e){try{localStorage.removeItem('kalli-ine-pend');}catch(e2){}}}
+function inePend(){try{return JSON.parse(localStorage.getItem('kalli-ine-pend')||'null');}catch(e){return null;}}
+function ineUlt(id){try{var o=JSON.parse(localStorage.getItem('kalli-ine-ult')||'null');return o&&o.id===id&&o.du&&o.du.length?o.du:null;}catch(e){return null;}}
+async function ineFilesDe(du){var out=[];for(var k=0;k<du.length;k++){var bl=await (await fetch(du[k])).blob();out.push(new File([bl],'ine'+(k+1)+'.jpg',{type:'image/jpeg'}));}return out;}
+/* si la página se recargó (publicación) a media lectura, la retoma sola */
+async function ineReanudar(){
+  var o=inePend();if(!o||!o.du||Date.now()-(+o.t||0)>600000||(+o.n||0)>=2){try{localStorage.removeItem('kalli-ine-pend');}catch(e){}return;}
+  var i=REC.findIndex(function(r){return r.id===o.id;});if(i<0){try{localStorage.removeItem('kalli-ine-pend');}catch(e){}return;}
+  o.n=(+o.n||0)+1;try{localStorage.setItem('kalli-ine-pend',JSON.stringify(o));}catch(e){}
+  try{if(!document.getElementById('admin')||!document.getElementById('admin').innerHTML){abrirAdmin();}A.tab='recibos';}catch(e){}
+  var fl=await ineFilesDe(o.du);await leerIne(i,fl);
+}
 async function leerIne(i,files){
-  await leerIneInt(i,files);
+  await leerIneInt(i,files);try{localStorage.removeItem('kalli-ine-pend');}catch(e){}
   var rc=REC[i];if(rc){A.ineMsg=A.ineMsg||{};A.ineMsg[rc.id]=A.status||'';try{renderAdmin(true);}catch(e){}}
 }
 async function leerIneInt(i,files){
@@ -2776,16 +2790,18 @@ async function leerIneInt(i,files){
   A.ineBuf=A.ineBuf||{};var buf=files.length>=2?files.slice(0,2):(A.ineBuf[rc.id]||[]).concat(files).slice(-2);
   if(buf.length<2){A.ineBuf[rc.id]=buf;A.status='Recibí 1 foto de la INE. Sube también la otra (frente y reverso) y la leo sola.';refreshFoot();return;}
   files=buf;A.ineLast=A.ineLast||{};A.ineLast[rc.id]=files;
-  if(autoPubT||A.busy||A.recargando){A.ineBuf[rc.id]=buf;A.status='Espera unos segundos: se está publicando y la página se va a recargar. Después sube la INE.';refreshFoot();return;}
   delete A.ineBuf[rc.id];
   A.status='Leyendo la INE con Claude… puede tardar un minuto.';refreshFoot();
+  var dus=[];try{for(var ik=0;ik<files.length;ik++){var dk=await comprimirFoto(files[ik],1800,0.9);if(dk)dus.push(dk);}}catch(e){dus=[];}
+  if(dus.length===files.length)inePendGuardar(rc.id,dus);
   try{var fz=await comprimirIne(files);if(fz.length)ineFotosGuardar(rc.id,fz);}catch(e){}
   var sm=null;for(var ia=0;ia<3&&!sm;ia++){try{if(window.claude&&typeof window.claude.use==='function')sm=await window.claude.use('sample');}catch(e){sm=null;}if(!sm&&ia<2)await esperar(1500);}
   if(!sm){A.status='Leer la INE solo funciona abriendo la app dentro de Claude. Llena los datos en «Editar datos».';refreshFoot();return;}
   try{
     var lim=null;for(var il=0;il<3&&!lim;il++){try{lim=await sm.limits();}catch(e){lim=null;}if(!lim&&il<2)await esperar(1200);}
     if(lim&&!lim.images){A.status='Esta versión de la app aún no puede mandar fotos a Claude. Llena los datos en «Editar datos».';refreshFoot();return;}
-    var o=null,ult=null,env=[];try{for(var ie=0;ie<files.length;ie++)env.push(await fotoParaClaude(files[ie]));}catch(e){env=files;}
+    var o=null,ult=null,env=[];
+    try{if(dus.length===files.length){env=await ineFilesDe(dus);}else env=files;}catch(e){env=files;}
     for(var it2=0;it2<3;it2++){
       try{o=await sm.json(INE_PROMPT,{images:env,modelTier:'default',cache:false});ult=null;break;}
       catch(e2){ult=e2;var c2=e2&&e2.code;if(c2==='not_granted'||c2==='rate_limited')break;if(it2<2){A.status='Leyendo la INE… (intento '+(it2+2)+' de 3)';refreshFoot();await esperar(1500);}}
@@ -3128,6 +3144,7 @@ function recPuente(){
       '<p style="margin:0 0 4px"><b>'+esc(qp.text||'Evento')+'</b></p>'+(fe?'<p class="hint" style="margin:0 0 14px">'+esc(cap(fechaLarga(fe[1]+'-'+fe[2]+'-'+fe[3])))+' · '+fe[4]+':'+fe[5]+' h</p>':'')+
       '<div style="display:grid;gap:10px"><a class="btn btn-main" href="'+esc(gu)+'">📅 Abrir en Google Calendar</a><a class="btn btn-line" href="'+esc(web)+'">Abrir en la página de Google Calendar</a></div>'+
       '<p class="hint">Revisa que la fecha y los datos estén llenos y toca «Guardar». Para regresar a Kalli, cierra esta pestaña.</p></section></main>';
+    try{var kk='kalli-gcal-auto';if(sessionStorage.getItem(kk)!==m[2]){sessionStorage.setItem(kk,m[2]);setTimeout(function(){location.href=gu;},250);}}catch(e){}
     return true;}
   try{if(window.top!==window.self)return false;}catch(e){return false;}
   if(m[1]==='ine'){ineVista(decodeURIComponent(m[2]));return true;}
@@ -3395,7 +3412,7 @@ function accionAdmin(a,t){
     case 'recibo-parse':{i=+t.dataset.i;var ta=document.getElementById('rc-paste-'+i);var ineP=parseIne(ta?ta.value:''),rc=REC[i];if(rc&&ineP&&rc.folio&&ineP.folio&&ineP.folio!=='—'&&ineP.folio!==rc.folio){A.status='Ese INE es del folio '+ineP.folio+', no de este recibo ('+rc.folio+'). Pégalo en el recibo correcto.';refreshFoot();break;}if(rc&&ineP){delete pasteBuf['rc-paste-'+i];['ineNombre','ineDomicilio','ineClave','ineVigencia'].forEach(function(k){if(ineP[k])rc[k]=ineP[k];});if(ineP.telefono&&!rc.telefono)rc.telefono=ineP.telefono;guardarRecibos();if(A.recEdit===i)A.recEdit=null;rc.ineOk=false;A.status='Listo: datos del INE cargados. Revísalos y toca «Autorizar y enviar».';renderAdmin(true);break;}var pr=prDeTexto(ta?ta.value:'');delete pasteBuf['rc-paste-'+i];if(rc){llenarReciboCot(rc,pr);guardarRecibos();if(pr.lineas.length&&A.recEdit===i)A.recEdit=null;A.status=pr.lineas.length?'Listo: recibo lleno con la cotización.':'No encontré la cotización en ese texto. Pega el mensaje completo.';renderAdmin(true);}break;}
     case 'recibo-editar':{i=+t.dataset.i;A.recEdit=A.recEdit===i?null:i;renderAdmin(true);break;}
     case 'ine-subir':{var ei=ineInputGlobal();ei.dataset.i=t.dataset.i;ei.click();break;}
-    case 'ine-reintentar':{i=+t.dataset.i;var rcx=REC[i];if(rcx&&A.ineLast&&A.ineLast[rcx.id])leerIne(i,A.ineLast[rcx.id]);break;}
+    case 'ine-reintentar':{i=+t.dataset.i;var rcx=REC[i];if(rcx){if(A.ineLast&&A.ineLast[rcx.id])leerIne(i,A.ineLast[rcx.id]);else{var du0=ineUlt(rcx.id);if(du0)ineFilesDe(du0).then(function(f0){leerIne(i,f0);});}}break;}
     case 'recibo-mas':{i=+t.dataset.i;A.recMas=A.recMas===i?null:i;renderAdmin(true);setTimeout(function(){var m=document.querySelector('.rc-mas');if(m&&m.scrollIntoView)m.scrollIntoView({block:'nearest'});},60);break;}
     case 'recibo-pdf':{i=+t.dataset.i;generarReciboPDF(REC[i]);break;}
     case 'pkg-imgs':generarImagenesPaquetes();break;
@@ -3487,6 +3504,7 @@ async function iniciarAdmin(){
     var hk=/^#k=([A-Za-z0-9_-]+)$/.exec(location.hash);
     if(hk){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
     canAdmin=!!ART&&edit;
+    if(canAdmin)setTimeout(function(){ineReanudar().catch(function(){});},1800);
     if(canAdmin&&S.step===2){try{render();}catch(e){}}
     if(hp&&canAdmin){updHeaderBtn();abrirAdmin();A.tab='ajustes';A.status=privOk?'Listo: tus costos y márgenes quedaron guardados en este dispositivo (no se publican).':'No se pudieron guardar los costos en este dispositivo.';renderAdmin(true);refreshFoot();return;}
     var rb=null;try{rb=JSON.parse(sessionStorage.getItem(REABRIR)||'null');sessionStorage.removeItem(REABRIR);}catch(e){}
