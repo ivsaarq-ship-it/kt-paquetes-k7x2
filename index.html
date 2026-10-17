@@ -2688,7 +2688,8 @@ function contratoCompleto(r){return +r.abono>0&&!!(r.ineNombre&&r.ineClave&&r.in
 function contratoEstadoHtml(r,i){
   var ab=+r.abono>0,ine=!!(r.ineNombre&&r.ineClave&&r.ineDomicilio),vig=ineVigente(r.ineVigencia),ok=contratoCompleto(r);
   function m(b){return b?'✅':'⬜';}
-  var subir='<label class="btn '+(ab&&!r.ineNombre?'btn-main':'btn-line')+' sm" style="cursor:pointer">📷 '+(r.ineNombre?'Volver a subir INE':'Subir INE (2 fotos)')+'<input type="file" accept="image/*" multiple hidden data-ine-leer="'+i+'"></label>';
+  ineInputGlobal().dataset.i=i;
+  var subir='<button type="button" class="btn '+(ab&&!r.ineNombre?'btn-main':'btn-line')+' sm" data-a="ine-subir" data-i="'+i+'">📷 '+(r.ineNombre?'Volver a subir INE':'Subir INE (2 fotos)')+'</button>';
   var imsg=(A.ineMsg&&A.ineMsg[r.id])||'';
   if(A.ineLast&&A.ineLast[r.id]&&!(r.ineNombre&&r.ineClave&&r.ineDomicilio))subir+='<button type="button" class="btn btn-main sm" data-a="ine-reintentar" data-i="'+i+'">↻ Reintentar con las mismas fotos</button>';
   if(ab&&!r.ineNombre&&!A.permAsked){A.permAsked=1;setTimeout(function(){try{if(window.claude&&typeof window.claude.use==='function')window.claude.use('permissions').then(function(pm){if(pm&&pm.request)pm.request(['sample']).catch(function(){});}).catch(function(){});}catch(e){}},400);}
@@ -2759,6 +2760,7 @@ async function comprimirFoto(file,max,q){var du=await leerDataURL(file);if(!du)r
   var sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),cv=document.createElement('canvas');cv.width=Math.round(im.naturalWidth*sc);cv.height=Math.round(im.naturalHeight*sc);
   var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(im,0,0,cv.width,cv.height);return cv.toDataURL('image/jpeg',q);}
 async function fotoParaClaude(file){try{var du=await comprimirFoto(file,1800,0.9);if(!du)return file;var r=await fetch(du);var b=await r.blob();return b&&b.size?new File([b],'ine.jpg',{type:'image/jpeg'}):file;}catch(e){return file;}}
+function ineInputGlobal(){var e=document.getElementById('ine-global');if(e)return e;e=document.createElement('input');e.type='file';e.id='ine-global';e.accept='image/*';e.multiple=true;e.hidden=true;e.addEventListener('change',function(){var i=+e.dataset.i||0,fl=[].slice.call(e.files||[]);e.value='';leerIne(i,fl);});document.body.appendChild(e);return e;}
 async function comprimirIne(files){var out=[];for(var k=0;k<files.length&&k<2;k++){var d=await comprimirFoto(files[k],720,0.55);if(d)out.push(d);}return out;}
 function fotoB64(du){return String(du||'').replace(/^data:image\/jpeg;base64,/,'').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function fotoDeB64(b){b=String(b||'').replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';return b?'data:image/jpeg;base64,'+b:'';}
@@ -2768,8 +2770,9 @@ async function leerIne(i,files){
   var rc=REC[i];if(rc){A.ineMsg=A.ineMsg||{};A.ineMsg[rc.id]=A.status||'';try{renderAdmin(true);}catch(e){}}
 }
 async function leerIneInt(i,files){
-  var rc=REC[i];files=(files||[]).filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name||'');}).slice(0,2);
-  if(!rc||!files.length)return;
+  var rc=REC[i],todas=(files||[]);files=todas.filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|heic|heif)$/i.test(f.name||'')||!f.type;}).slice(0,2);
+  if(!rc)return;
+  if(!files.length){A.status=todas.length?'No reconocí esas fotos. Elige fotos de tu INE (JPG o PNG).':'No llegó ninguna foto. Vuelve a elegirlas.';refreshFoot();return;}
   A.ineBuf=A.ineBuf||{};var buf=files.length>=2?files.slice(0,2):(A.ineBuf[rc.id]||[]).concat(files).slice(-2);
   if(buf.length<2){A.ineBuf[rc.id]=buf;A.status='Recibí 1 foto de la INE. Sube también la otra (frente y reverso) y la leo sola.';refreshFoot();return;}
   files=buf;A.ineLast=A.ineLast||{};A.ineLast[rc.id]=files;
@@ -3391,6 +3394,7 @@ function accionAdmin(a,t){
     case 'recibo-desautorizar':{i=+t.dataset.i;if(!REC[i])break;REC[i].ineOk=false;guardarRecibos();A.status='Autorización quitada.';renderAdmin(true);break;}
     case 'recibo-parse':{i=+t.dataset.i;var ta=document.getElementById('rc-paste-'+i);var ineP=parseIne(ta?ta.value:''),rc=REC[i];if(rc&&ineP&&rc.folio&&ineP.folio&&ineP.folio!=='—'&&ineP.folio!==rc.folio){A.status='Ese INE es del folio '+ineP.folio+', no de este recibo ('+rc.folio+'). Pégalo en el recibo correcto.';refreshFoot();break;}if(rc&&ineP){delete pasteBuf['rc-paste-'+i];['ineNombre','ineDomicilio','ineClave','ineVigencia'].forEach(function(k){if(ineP[k])rc[k]=ineP[k];});if(ineP.telefono&&!rc.telefono)rc.telefono=ineP.telefono;guardarRecibos();if(A.recEdit===i)A.recEdit=null;rc.ineOk=false;A.status='Listo: datos del INE cargados. Revísalos y toca «Autorizar y enviar».';renderAdmin(true);break;}var pr=prDeTexto(ta?ta.value:'');delete pasteBuf['rc-paste-'+i];if(rc){llenarReciboCot(rc,pr);guardarRecibos();if(pr.lineas.length&&A.recEdit===i)A.recEdit=null;A.status=pr.lineas.length?'Listo: recibo lleno con la cotización.':'No encontré la cotización en ese texto. Pega el mensaje completo.';renderAdmin(true);}break;}
     case 'recibo-editar':{i=+t.dataset.i;A.recEdit=A.recEdit===i?null:i;renderAdmin(true);break;}
+    case 'ine-subir':{var ei=ineInputGlobal();ei.dataset.i=t.dataset.i;ei.click();break;}
     case 'ine-reintentar':{i=+t.dataset.i;var rcx=REC[i];if(rcx&&A.ineLast&&A.ineLast[rcx.id])leerIne(i,A.ineLast[rcx.id]);break;}
     case 'recibo-mas':{i=+t.dataset.i;A.recMas=A.recMas===i?null:i;renderAdmin(true);setTimeout(function(){var m=document.querySelector('.rc-mas');if(m&&m.scrollIntoView)m.scrollIntoView({block:'nearest'});},60);break;}
     case 'recibo-pdf':{i=+t.dataset.i;generarReciboPDF(REC[i]);break;}
