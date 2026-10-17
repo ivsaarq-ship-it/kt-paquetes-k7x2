@@ -2767,12 +2767,14 @@ async function comprimirIne(files){var out=[];for(var k=0;k<files.length&&k<2;k+
 function fotoB64(du){return String(du||'').replace(/^data:image\/jpeg;base64,/,'').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function fotoDeB64(b){b=String(b||'').replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';return b?'data:image/jpeg;base64,'+b:'';}
 /* Lee las fotos de la INE con Claude (cuenta del dueño; pide permiso la primera vez). No se guarda nada en la nube: solo en el recibo de este celular. */
+function conTope(p,ms){return new Promise(function(res,rej){var t=setTimeout(function(){var e=new Error('timeout');e.code='timeout';rej(e);},ms);Promise.resolve(p).then(function(v){clearTimeout(t);res(v);},function(e){clearTimeout(t);rej(e);});});}
 function inePendGuardar(id,du){var o={id:id,du:du,t:Date.now(),n:(inePend()&&inePend().id===id?inePend().n:0)||0};try{localStorage.setItem('kalli-ine-pend',JSON.stringify(o));localStorage.setItem('kalli-ine-ult',JSON.stringify({id:id,du:du}));}catch(e){try{localStorage.removeItem('kalli-ine-pend');}catch(e2){}}}
 function inePend(){try{return JSON.parse(localStorage.getItem('kalli-ine-pend')||'null');}catch(e){return null;}}
 function ineUlt(id){try{var o=JSON.parse(localStorage.getItem('kalli-ine-ult')||'null');return o&&o.id===id&&o.du&&o.du.length?o.du:null;}catch(e){return null;}}
 async function ineFilesDe(du){var out=[];for(var k=0;k<du.length;k++){var bl=await (await fetch(du[k])).blob();out.push(new File([bl],'ine'+(k+1)+'.jpg',{type:'image/jpeg'}));}return out;}
 /* si la página se recargó (publicación) a media lectura, la retoma sola */
 async function ineReanudar(){
+  if(A.ineGen)return;   /* ya hay una lectura en esta sesión */
   var o=inePend();if(!o||!o.du||Date.now()-(+o.t||0)>600000||(+o.n||0)>=2){try{localStorage.removeItem('kalli-ine-pend');}catch(e){}return;}
   var i=REC.findIndex(function(r){return r.id===o.id;});if(i<0){try{localStorage.removeItem('kalli-ine-pend');}catch(e){}return;}
   o.n=(+o.n||0)+1;try{localStorage.setItem('kalli-ine-pend',JSON.stringify(o));}catch(e){}
@@ -2780,7 +2782,8 @@ async function ineReanudar(){
   var fl=await ineFilesDe(o.du);await leerIne(i,fl);
 }
 async function leerIne(i,files){
-  await leerIneInt(i,files);try{localStorage.removeItem('kalli-ine-pend');}catch(e){}
+  if(await leerIneInt(i,files)==='viejo')return;
+  clearInterval(A.ineTk);try{localStorage.removeItem('kalli-ine-pend');}catch(e){}
   var rc=REC[i];if(rc){A.ineMsg=A.ineMsg||{};A.ineMsg[rc.id]=A.status||'';try{renderAdmin(true);}catch(e){}}
 }
 async function leerIneInt(i,files){
@@ -2791,21 +2794,25 @@ async function leerIneInt(i,files){
   if(buf.length<2){A.ineBuf[rc.id]=buf;A.status='Recibí 1 foto de la INE. Sube también la otra (frente y reverso) y la leo sola.';refreshFoot();return;}
   files=buf;A.ineLast=A.ineLast||{};A.ineLast[rc.id]=files;
   delete A.ineBuf[rc.id];
-  A.status='Leyendo la INE con Claude… puede tardar un minuto.';refreshFoot();
+  var gen=A.ineGen=(A.ineGen||0)+1,t0=Date.now();function viva(){return gen===A.ineGen;}
+  A.status='Leyendo la INE con Claude… puede tardar un minuto.';
+  clearInterval(A.ineTk);A.ineTk=setInterval(function(){if(!viva()){clearInterval(A.ineTk);return;}var s=String(A.status||'');if(/^Leyendo/.test(s)){var seg=Math.round((Date.now()-t0)/1000);A.status=s.replace(/ · \d+ s.*$/,'')+' · '+seg+' s'+(seg>=30?' · si no avanza, toca «↻ Reintentar»':'');refreshFoot();}},3000);
+  try{renderAdmin(true);}catch(e){}
   var dus=[];try{for(var ik=0;ik<files.length;ik++){var dk=await comprimirFoto(files[ik],1800,0.9);if(dk)dus.push(dk);}}catch(e){dus=[];}
   if(dus.length===files.length)inePendGuardar(rc.id,dus);
   try{var fz=await comprimirIne(files);if(fz.length)ineFotosGuardar(rc.id,fz);}catch(e){}
-  var sm=null;for(var ia=0;ia<3&&!sm;ia++){try{if(window.claude&&typeof window.claude.use==='function')sm=await window.claude.use('sample');}catch(e){sm=null;}if(!sm&&ia<2)await esperar(1500);}
+  var sm=null;for(var ia=0;ia<3&&!sm;ia++){try{if(window.claude&&typeof window.claude.use==='function')sm=await conTope(window.claude.use('sample'),15000);}catch(e){sm=null;}if(!viva())return 'viejo';if(!sm&&ia<2)await esperar(1500);}
   if(!sm){A.status='Leer la INE solo funciona abriendo la app dentro de Claude. Llena los datos en «Editar datos».';refreshFoot();return;}
   try{
-    var lim=null;for(var il=0;il<3&&!lim;il++){try{lim=await sm.limits();}catch(e){lim=null;}if(!lim&&il<2)await esperar(1200);}
+    var lim=null;for(var il=0;il<3&&!lim;il++){try{lim=await conTope(sm.limits(),10000);}catch(e){lim=null;}if(!viva())return 'viejo';if(!lim&&il<2)await esperar(1200);}
     if(lim&&!lim.images){A.status='Esta versión de la app aún no puede mandar fotos a Claude. Llena los datos en «Editar datos».';refreshFoot();return;}
     var o=null,ult=null,env=[];
     try{if(dus.length===files.length){env=await ineFilesDe(dus);}else env=files;}catch(e){env=files;}
     for(var it2=0;it2<3;it2++){
-      try{o=await sm.json(INE_PROMPT,{images:env,modelTier:'default',cache:false});ult=null;break;}
-      catch(e2){ult=e2;var c2=e2&&e2.code;if(c2==='not_granted'||c2==='rate_limited')break;if(it2<2){A.status='Leyendo la INE… (intento '+(it2+2)+' de 3)';refreshFoot();await esperar(1500);}}
+      try{o=await conTope(sm.json(INE_PROMPT,{images:env,modelTier:'default',cache:false}),35000);ult=null;break;}
+      catch(e2){if(!viva())return 'viejo';ult=e2;var c2=e2&&e2.code;if(c2==='not_granted'||c2==='rate_limited')break;if(it2<2){A.status='Leyendo la INE… (intento '+(it2+2)+' de 3)';refreshFoot();await esperar(1500);}}
     }
+    if(!viva())return 'viejo';
     if(ult)throw ult;
     o=o&&typeof o==='object'&&!Array.isArray(o)?o:{};
     if(o.esINE===false){A.status='Esas fotos no parecen una INE. Pide al cliente la foto de frente y reverso.';refreshFoot();return;}
@@ -2819,8 +2826,9 @@ async function leerIneInt(i,files){
     A.status=(venc?'⚠ INE VENCIDA ('+vg+'): no sirve para el contrato. ':'Leí: '+(nom||'—')+' · clave '+(cl||'—')+' · vigente hasta '+(vg||'—')+'. Compáralo con la foto y toca «Autorizar y enviar». ')+(av.length||dudas.length?'Revisa a mano: '+av.concat(dudas).join(', ')+'.':'');
     renderAdmin(true);
   }catch(e){
+    if(!viva())return 'viejo';
     var c=e&&e.code;
-    A.status=c==='not_granted'?'No diste permiso a Claude para leer las fotos. Llena los datos en «Editar datos». (not_granted)':c==='rate_limited'?'Demasiadas lecturas seguidas: espera un minuto. (rate_limited)':c==='invalid_json'?'No pude leer la INE. Toma las fotos de frente, con luz y sin reflejos. (invalid_json)':c==='image_rejected'?'Una foto no sirve (muy grande o dañada). Toma otra. (image_rejected)':'No se pudo leer la INE ('+(c||'error')+'). Sube las fotos otra vez o llena los datos en «Editar datos».';
+    A.status=c==='timeout'?'Claude no respondió a tiempo. Toca «↻ Reintentar con las mismas fotos». (timeout)':c==='not_granted'?'No diste permiso a Claude para leer las fotos. Llena los datos en «Editar datos». (not_granted)':c==='rate_limited'?'Demasiadas lecturas seguidas: espera un minuto. (rate_limited)':c==='invalid_json'?'No pude leer la INE. Toma las fotos de frente, con luz y sin reflejos. (invalid_json)':c==='image_rejected'?'Una foto no sirve (muy grande o dañada). Toma otra. (image_rejected)':'No se pudo leer la INE ('+(c||'error')+'). Sube las fotos otra vez o llena los datos en «Editar datos».';
     refreshFoot();
   }
 }
