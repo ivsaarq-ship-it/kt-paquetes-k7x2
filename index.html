@@ -3419,8 +3419,11 @@ function respContenido(){
 }
 function respActual(){return (A&&A.draft&&A.draft.respaldo)||D.respaldo||null;}
 function respFecha(iso8){try{return fechaLarga(iso8);}catch(e){return iso8;}}
+function linkPrivado(){var k=claveResp();if(!k)return '';var o={k:k},p=privLeer();if(p&&p.reglas){o.reglas=p.reglas;o.costos=p.costos||{};}
+  return appUrl()+'#privado:'+btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function respPanel(){
   var u=A.respUI;if(!u)return '';
+  if(u.t==='link')return '<div class="recover" style="margin-bottom:16px"><p style="margin:0 0 8px"><b>🔑 Tu link privado.</b> Ábrelo en otro celular o computadora para recuperar tus costos y respaldos. Guárdalo fuera de este celular (gestor de contraseñas o en papel). No lo mandes por WhatsApp ni por correo.</p><textarea id="resp-link" rows="4" readonly autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;font-size:14px;box-sizing:border-box;overflow-wrap:anywhere">'+esc(linkPrivado())+'</textarea><div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn btn-main sm" data-a="resp-copiar">Copiar</button><button type="button" class="btn btn-ghost sm" data-a="resp-cancel">Cerrar</button></div></div>';
   var h='<div class="recover" style="margin-bottom:16px">';
   if(u.t==='clave'){
     h+='<p style="margin:0 0 8px"><b>Activar respaldo.</b> Pega aquí tu link privado NUEVO completo (el que te mandó Claude, termina en …fQ) y toca "Activar".</p><textarea id="resp-in" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;font-size:16px;box-sizing:border-box" placeholder="Pega el link privado nuevo…"></textarea>';
@@ -3436,7 +3439,7 @@ function respPanel(){
 function respBanner(){
   var r=respActual(),k=claveResp();
   var txt=(k&&r&&r.f)?'Último respaldo: '+respFecha(r.f.slice(0,10))+'.':'';
-  return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center"><span style="flex:1 1 220px">'+txt+'</span><span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button></span></div>';
+  return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center"><span style="flex:1 1 220px">'+txt+'</span><span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button>'+(k?'<button type="button" class="btn btn-ghost sm" data-a="resp-link">🔑 Mi link privado</button>':'')+'</span></div>';
 }
 async function respaldarNube(manual){
   var k=claveResp();
@@ -3495,6 +3498,8 @@ function accionAdmin(a,t){
     case 'restaurar':restaurarNube();break;
     case 'resp-ok':respOk();break;
     case 'resp-cancel':A.respUI=null;renderAdmin(true);break;
+    case 'resp-link':A.respUI={t:'link'};renderAdmin(true);break;
+    case 'resp-copiar':{var tl=document.getElementById('resp-link');if(tl){tl.focus();tl.select();}copiar(linkPrivado(),'Link copiado. Guárdalo en un lugar seguro.');break;}
     case 'tab':{var tv=t.dataset.tab;if(A.tabsPermitidos&&tv!=='recibos'&&A.tabsPermitidos.indexOf(tv)<0)break;A.tab=tv;A.confirm=A.confirm==='pub'||A.confirm==='discard'?A.confirm:null;renderAdmin();break;}
     case 'mes':{var m=parse(A.mes);A.mes=iso(new Date(m.getFullYear(),m.getMonth()+(+t.dataset.mes),1));renderAdmin(true);break;}
     case 'toggle-date':{var s=t.dataset.date,ix=d.ocupadas.findIndex(function(o){return o.fecha===s;}),iap=(d.apartados||[]).findIndex(function(a){return a.fecha===s;});if(ix>=0)d.ocupadas.splice(ix,1);else if(iap>=0){var apc=d.apartados[iap];marcarHistorial(d,apc.folio||apc.nota,'confirmado');d.ocupadas.push({fecha:s,nota:apc.folio||apc.nota||'Reservado'});d.apartados.splice(iap,1);d.ocupadas.sort(function(a,b){return a.fecha<b.fecha?-1:1;});}else{d.ocupadas.push({fecha:s,nota:'Reservado'});d.ocupadas.sort(function(a,b){return a.fecha<b.fecha?-1:1;});}marcarCambio();renderAdmin(true);var btn=adm.querySelector('[data-a="toggle-date"][data-date="'+s+'"]');if(btn)btn.focus({preventScroll:true});autoPublicar();break;}
