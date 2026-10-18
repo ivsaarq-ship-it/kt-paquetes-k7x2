@@ -2525,8 +2525,10 @@ async function privAbrir(){
     var sec=JSON.parse(await descifrarResp(b,k));
     A.draft.apartados=sec.apartados||[];A.draft.historial=sec.historial||[];A.draft.pagos=sec.pagos||{};
     A.draft.ocupadas.forEach(function(o){if(sec.notas&&sec.notas[o.fecha])o.nota=sec.notas[o.fecha];});
-    A.privPend=false;if(adm)renderAdmin(true);
-  }catch(e){A.privBloq=true;A.privPend=false;if(adm)renderAdmin(true);}
+    A.privPend=false;try{localStorage.removeItem(KEY_K+'-nueva');}catch(e){}if(adm)renderAdmin(true);
+  }catch(e){var nueva=false;try{nueva=localStorage.getItem(KEY_K+'-nueva')==='1';}catch(x){}
+    if(nueva){A.draft.apartados=clone(D.apartados||[]);A.draft.historial=[];A.draft.pagos={};A.privBloq=false;}else A.privBloq=true;
+    A.privPend=false;if(adm)renderAdmin(true);}
 }
 async function publicar(){
   var d=privExtraer(normalizar(clone(A.draft)));
@@ -3419,10 +3421,18 @@ function respContenido(){
 }
 function respActual(){return (A&&A.draft&&A.draft.respaldo)||D.respaldo||null;}
 function respFecha(iso8){try{return fechaLarga(iso8);}catch(e){return iso8;}}
+function crearClaveNueva(){
+  if(claveResp()){A.respUI={t:'link'};renderAdmin(true);return;}
+  var a=crypto.getRandomValues(new Uint8Array(24)),k=b64(a.buffer).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  try{localStorage.setItem(KEY_K,k);localStorage.setItem(KEY_K+'-nueva','1');}catch(e){A.status='No se pudo guardar la clave en este celular.';refreshFoot();return;}
+  if(A.privBloq){A.draft.apartados=clone(D.apartados||[]);A.draft.historial=[];A.draft.pagos={};A.privBloq=false;}
+  A.respUI={t:'link'};A.status='Listo: clave nueva creada. Copia tu link privado, guárdalo y luego toca «Respaldar».';renderAdmin(true);refreshFoot();
+}
 function linkPrivado(){var k=claveResp();if(!k)return '';var o={k:k},p=privLeer();if(p&&p.reglas){o.reglas=p.reglas;o.costos=p.costos||{};}
   return appUrl()+'#privado:'+btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function respPanel(){
   var u=A.respUI;if(!u)return '';
+  if(u.t==='nueva')return '<div class="recover" style="margin-bottom:16px"><p style="margin:0 0 8px"><b>🔑 Crear link privado nuevo.</b> Se guarda una clave nueva en este celular. Los respaldos y datos cifrados con la clave anterior ya no se podrán abrir.</p><div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn btn-main sm" data-a="resp-nueva-ok">Sí, crear</button><button type="button" class="btn btn-ghost sm" data-a="resp-cancel">Cancelar</button></div></div>';
   if(u.t==='link')return '<div class="recover" style="margin-bottom:16px"><p style="margin:0 0 8px"><b>🔑 Tu link privado.</b> Ábrelo en otro celular o computadora para recuperar tus costos y respaldos. Guárdalo fuera de este celular (gestor de contraseñas o en papel). No lo mandes por WhatsApp ni por correo.</p><textarea id="resp-link" rows="4" readonly autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;font-size:14px;box-sizing:border-box;overflow-wrap:anywhere">'+esc(linkPrivado())+'</textarea><div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn btn-main sm" data-a="resp-copiar">Copiar</button><button type="button" class="btn btn-ghost sm" data-a="resp-cancel">Cerrar</button></div></div>';
   var h='<div class="recover" style="margin-bottom:16px">';
   if(u.t==='clave'){
@@ -3439,7 +3449,7 @@ function respPanel(){
 function respBanner(){
   var r=respActual(),k=claveResp();
   var txt=(k&&r&&r.f)?'Último respaldo: '+respFecha(r.f.slice(0,10))+'.':'';
-  return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center"><span style="flex:1 1 220px">'+txt+'</span><span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button>'+(k?'<button type="button" class="btn btn-ghost sm" data-a="resp-link">🔑 Mi link privado</button>':'')+'</span></div>';
+  return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center"><span style="flex:1 1 220px">'+txt+'</span><span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button>'+(k?'<button type="button" class="btn btn-ghost sm" data-a="resp-link">🔑 Mi link privado</button>':'<button type="button" class="btn btn-ghost sm" data-a="resp-nueva">🔑 Crear link privado</button>')+'</span></div>';
 }
 async function respaldarNube(manual){
   var k=claveResp();
@@ -3499,6 +3509,8 @@ function accionAdmin(a,t){
     case 'resp-ok':respOk();break;
     case 'resp-cancel':A.respUI=null;renderAdmin(true);break;
     case 'resp-link':A.respUI={t:'link'};renderAdmin(true);break;
+    case 'resp-nueva':A.respUI={t:'nueva'};renderAdmin(true);break;
+    case 'resp-nueva-ok':crearClaveNueva();break;
     case 'resp-copiar':{var tl=document.getElementById('resp-link');if(tl){tl.focus();tl.select();}copiar(linkPrivado(),'Link copiado. Guárdalo en un lugar seguro.');break;}
     case 'tab':{var tv=t.dataset.tab;if(A.tabsPermitidos&&tv!=='recibos'&&A.tabsPermitidos.indexOf(tv)<0)break;A.tab=tv;A.confirm=A.confirm==='pub'||A.confirm==='discard'?A.confirm:null;renderAdmin();break;}
     case 'mes':{var m=parse(A.mes);A.mes=iso(new Date(m.getFullYear(),m.getMonth()+(+t.dataset.mes),1));renderAdmin(true);break;}
