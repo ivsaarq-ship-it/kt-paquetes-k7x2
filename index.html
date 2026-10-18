@@ -2007,7 +2007,7 @@ function admImgPaquetes(){
     '<label class="field">Fecha del evento<input type="date" id="pimg-fecha" value="'+esc(f)+'"></label>'+
     '<label class="field">Invitados<input type="number" id="pimg-inv" inputmode="numeric" min="1" value="'+esc(inv)+'"></label>'+
     '<div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main" data-a="pkg-share">Mandar por WhatsApp (sin guardarlas)</button><button type="button" class="btn btn-line" data-a="pkg-imgs">Descargar las 3 imágenes</button></div>'+
-    '<p class="hint" style="margin:10px 0 0">«Mandar por WhatsApp» abre el menú de compartir de tu celular con las 3 imágenes: eliges WhatsApp y el chat del cliente, y no se llena tu galería. Si tu celular no lo permite desde aquí, te lo avisará y usas «Descargar».</p></div>';
+    '<p class="hint" style="margin:10px 0 0">«Mandar por WhatsApp» abre el menú de compartir de tu celular con las 3 imágenes: eliges WhatsApp y el chat del cliente, y no se llena tu galería. El texto con el link de la app se copia solo: en el chat, mantén presionado, toca «Pegar» y envíalo. Si tu celular no lo permite desde aquí, te lo avisará y usas «Descargar».</p></div>';
 }
 function admPaquetes(d){
   return '<p class="hint" style="margin:0 0 14px">Cambia nombres, precios y lo que incluye cada paquete. Tus clientes los ven en este mismo orden.</p>'+admImgPaquetes()+
@@ -3155,6 +3155,9 @@ async function compartirImagenesPaquetes(){
   if(inv<mn||inv>cp){A.status='Para esa fecha los invitados deben estar entre '+mn+' y '+cp+'.';refreshFoot();return;}
   var pk=D.paquetes.filter(function(p){return p.activo!==false;});
   if(!pk.length){A.status='No hay paquetes activos.';refreshFoot();return;}
+  /* WhatsApp en Android tira el texto cuando se comparten varias fotos: se copia para pegarlo en el chat */
+  var txtLink=leyendaPaquetes()+'\nPersonaliza tu paquete aquí: '+appUrl(),copiado=false;
+  try{navigator.clipboard.writeText(txtLink).then(function(){copiado=true;},function(){});}catch(e){}
   if(!(navigator.share&&navigator.canShare)){A.status='Tu celular no deja compartir archivos desde aquí. Usa «Descargar las 3 imágenes» y adjúntalas desde tu Galería.';refreshFoot();return;}
   try{
     A.status='Preparando las imágenes…';refreshFoot();
@@ -3167,8 +3170,8 @@ async function compartirImagenesPaquetes(){
     if(!navigator.canShare({files:files})){A.status='Tu celular no deja compartir archivos desde aquí. Usa «Descargar las 3 imágenes» y adjúntalas desde tu Galería.';refreshFoot();return;}
     var listo=false;
     setTimeout(function(){if(!listo){A.status='Si no se abrió el menú de compartir, tu celular no lo permite desde aquí: usa «Descargar las 3 imágenes».';refreshFoot();}},4500);
-    await navigator.share({files:files,text:'Paquetes de '+D.negocio.nombre+' para '+inv+' invitados · '+fechaLarga(fecha)+'.\n\n'+leyendaPaquetes()+'\nPersonaliza tu paquete aquí: '+appUrl()});
-    listo=true;A.status='Listo, imágenes enviadas.';refreshFoot();
+    await navigator.share({files:files,text:'Paquetes de '+D.negocio.nombre+' para '+inv+' invitados · '+fechaLarga(fecha)+'.\n\n'+txtLink});
+    listo=true;A.status=copiado?'Listo. El texto con el link quedó copiado: en el chat de WhatsApp mantén presionado el cuadro de mensaje, toca «Pegar» y envíalo.':'Listo, imágenes enviadas.';refreshFoot();
   }catch(e){
     if(e&&e.name==='AbortError'){A.status='Envío cancelado.';refreshFoot();return;}
     A.status='Tu celular no deja compartir archivos desde aquí. Usa «Descargar las 3 imágenes» y adjúntalas desde tu Galería.';refreshFoot();
