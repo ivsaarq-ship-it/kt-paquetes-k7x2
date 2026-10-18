@@ -3130,7 +3130,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
       texto(pr.pagoTotal?'Para apartar esta fecha: pago total de '+fmt(pr.gran):'Para apartar tu fecha: anticipo de '+fmt(pr.anticipo)+' ('+pr.pct+' %)',28,true,false,'#2B6A58',40,M+36,iw-72);
       y+=8;if(real){cx.fillStyle='#E4BE84';cx.fillRect(M+36,y,iw-72,2);}y+=14;fila('Total con IVA (si requiere factura)',fmt(Math.round(pr.gran+pr.total*ivaPct()/100)),24,30,42,'#46564D',false);
       y=y0+bh+34;}
-    texto('Precios antes de IVA. Cotización estimada, sujeta a disponibilidad de proveedores.',28,true,false,'#17221C',38);y+=22;
+    texto('Cotización estimada, sujeta a disponibilidad de proveedores.',28,true,false,'#17221C',38);y+=22;
     texto('Qué incluye',44,true,true,'#17221C',60);y+=6;
     inc.forEach(function(x){var h=/^todo lo del/i.test(x.trim())||/:$/.test(x.trim());
       if(h){y+=6;texto(x,34,true,false,'#17221C',46);y+=4;}
