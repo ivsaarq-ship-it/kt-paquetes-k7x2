@@ -3095,6 +3095,7 @@ function precioPaqueteImg(p,inv,fecha){
     return {chico:false,total:paq,depM:dep,gran:gran,pagoTotal:pt,pct:pc,anticipo:Math.round(gran*pc/100),dep:depositoTexto(false,p,inv)};
   }finally{S.fecha=bak.fecha;S.invitados=bak.invitados;}
 }
+function leyendaPaquetes(){return 'Todo paquete lo puedes personalizar desde la app. ¿Te interesa alguno? Dinos y te ayudamos a armarlo a tu gusto y medida.';}
 async function dibujarPaqueteImg(p,pr,inv,fecha){
   var W=1080,SER='Georgia, "Times New Roman", serif',SAN='Helvetica, Arial, sans-serif',logo=await cargarImg(LOGO_URI);
   var n=D.negocio,inc=(p.incluye||[]).slice();
@@ -3137,7 +3138,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
     if(pr.dep&&pr.chico)texto(pr.dep.replace(/^\+\s*/,'Además: '),28,false,false,'#46564D',38);
     y+=26;
     var fy=y;if(real){cx.fillStyle='#1F3B30';cx.fillRect(0,fy,W,366);}
-    y=fy+34;texto('Aparta tu fecha por WhatsApp',40,true,true,'#FFFFFF',52);texto(telsNegocio()+' · '+(n.ciudad||''),32,false,false,'#E4BE84',44);texto('Precios antes de IVA. Cotización estimada, sujeta a disponibilidad.',24,false,false,'#BFD2C7',34);texto((n.sitioWeb||'')+' · Instagram, Facebook y TikTok: '+(D.negocio.usuarioRedes||''),24,false,false,'#E4BE84',34);texto('Personaliza tu paquete en la app: '+appUrl().replace(/^https?:\/\//,''),24,true,false,'#FFFFFF',34);
+    y=fy+34;texto('Aparta tu fecha por WhatsApp',40,true,true,'#FFFFFF',52);texto(telsNegocio()+' · '+(n.ciudad||''),32,false,false,'#E4BE84',44);texto('Precios antes de IVA. Cotización estimada, sujeta a disponibilidad.',24,false,false,'#BFD2C7',34);texto((n.sitioWeb||'')+' · Instagram, Facebook y TikTok: '+(D.negocio.usuarioRedes||''),24,false,false,'#E4BE84',34);
     return y+40;
   }
   var tmp=document.createElement('canvas').getContext('2d'),H=Math.ceil(pasada(tmp,false));
@@ -3165,7 +3166,7 @@ async function compartirImagenesPaquetes(){
     if(!navigator.canShare({files:files})){A.status='Tu celular no deja compartir archivos desde aquí. Usa «Descargar las 3 imágenes» y adjúntalas desde tu Galería.';refreshFoot();return;}
     var listo=false;
     setTimeout(function(){if(!listo){A.status='Si no se abrió el menú de compartir, tu celular no lo permite desde aquí: usa «Descargar las 3 imágenes».';refreshFoot();}},4500);
-    await navigator.share({files:files,text:'Paquetes de '+D.negocio.nombre+' para '+inv+' invitados · '+fechaLarga(fecha)+'.'});
+    await navigator.share({files:files,text:'Paquetes de '+D.negocio.nombre+' para '+inv+' invitados · '+fechaLarga(fecha)+'.\n\n'+leyendaPaquetes()+'\nPersonaliza tu paquete aquí: '+appUrl()});
     listo=true;A.status='Listo, imágenes enviadas.';refreshFoot();
   }catch(e){
     if(e&&e.name==='AbortError'){A.status='Envío cancelado.';refreshFoot();return;}
