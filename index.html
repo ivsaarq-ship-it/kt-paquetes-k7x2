@@ -3130,6 +3130,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
       texto(pr.pagoTotal?'Para apartar esta fecha: pago total de '+fmt(pr.gran):'Para apartar tu fecha: anticipo de '+fmt(pr.anticipo)+' ('+pr.pct+' %)',28,true,false,'#2B6A58',40,M+36,iw-72);
       y+=8;if(real){cx.fillStyle='#E4BE84';cx.fillRect(M+36,y,iw-72,2);}y+=14;fila('Total con IVA (si requiere factura)',fmt(Math.round(pr.gran+pr.total*ivaPct()/100)),24,30,42,'#46564D',false);
       y=y0+bh+34;}
+    texto('Precios antes de IVA. Cotización estimada, sujeta a disponibilidad de proveedores.',28,true,false,'#17221C',38);y+=22;
     texto('Qué incluye',44,true,true,'#17221C',60);y+=6;
     inc.forEach(function(x){var h=/^todo lo del/i.test(x.trim())||/:$/.test(x.trim());
       if(h){y+=6;texto(x,34,true,false,'#17221C',46);y+=4;}
@@ -3138,7 +3139,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
     if(pr.dep&&pr.chico)texto(pr.dep.replace(/^\+\s*/,'Además: '),28,false,false,'#46564D',38);
     y+=26;
     var fy=y;if(real){cx.fillStyle='#1F3B30';cx.fillRect(0,fy,W,366);}
-    y=fy+34;texto('Aparta tu fecha por WhatsApp',40,true,true,'#FFFFFF',52);texto(telsNegocio()+' · '+(n.ciudad||''),32,false,false,'#E4BE84',44);texto('Precios antes de IVA. Cotización estimada, sujeta a disponibilidad.',24,false,false,'#BFD2C7',34);texto((n.sitioWeb||'')+' · Instagram, Facebook y TikTok: '+(D.negocio.usuarioRedes||''),24,false,false,'#E4BE84',34);
+    y=fy+34;texto('Aparta tu fecha por WhatsApp',40,true,true,'#FFFFFF',52);texto(telsNegocio()+' · '+(n.ciudad||''),32,false,false,'#E4BE84',44);texto((n.sitioWeb||'')+' · Instagram, Facebook y TikTok: '+(D.negocio.usuarioRedes||''),24,false,false,'#E4BE84',34);
     return y+40;
   }
   var tmp=document.createElement('canvas').getContext('2d'),H=Math.ceil(pasada(tmp,false));
