@@ -1706,11 +1706,10 @@ function mensajeLargo(){
 function mensaje(){
   if(esContactoChico())return mensajeLargo();
   var n=D.negocio,c=calc(),tier=tierFecha(S.fecha),p=pkg(S.paquete);
-  var t='Hola, '+n.nombre+'. Quiero apartar esta fecha:\n\n';
+  var t='Hola, quiero apartar esta fecha:\n\n';
   t+='*Folio:* '+S.folio+'\n*Fecha:* '+fechaLarga(S.fecha)+', '+S.horario+' h\n';
   t+='*Evento:* '+[S.tipo,S.invitados+' invitados',p?p.nombre:''].filter(Boolean).join(' · ')+'\n';
   t+='*Subtotal:* '+fmt(c.total)+' (antes de IVA)\n*'+(c.pagoTotal?'Pago total':'Anticipo ('+c.pct+' %)')+':* '+fmt(c.anticipo)+'\n';
-  t+='*Nombre:* '+nomLimpio()+'\n';
   if(S.notas.trim())t+='*Comentarios:* '+notasLimpias()+'\n';
   if(tier==='cerca')t+='⚠️ Fecha próxima: apartado de solo '+(+D.reglas.holdHorasCercano||2)+' h.\n';
   if(S.terms)t+='✅ Leí y acepto términos y aviso de privacidad.\n';
