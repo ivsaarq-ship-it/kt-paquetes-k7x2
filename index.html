@@ -1959,10 +1959,32 @@ app.addEventListener('toggle',function(e){var d=e.target;if(d&&d.dataset&&d.data
 
 /* ---------- administración ---------- */
 var MODO_DUENO=true;var ART=null,canAdmin=false,A=null,adm=null,USR=null,EDITOR=false;
-var RKEY='kalli-recibos-v1';
+var RKEY='kalli-recibos-v1',RBAJAS='kalli-recibos-bajas-v1';
 function cargarRecibos(){try{var r=localStorage.getItem(RKEY);var arr=r?JSON.parse(r):[];return Array.isArray(arr)?arr:[];}catch(e){return [];}}
-function guardarRecibos(){try{localStorage.setItem(RKEY,JSON.stringify(REC));}catch(e){if(A){A.status='No se pudo guardar en este navegador (memoria local llena o bloqueada).';refreshFoot();}}}
-var REC=cargarRecibos();
+/* Cada recibo lleva «mod» (cuándo cambió) y los borrados quedan anotados (RBAJAS): así el respaldo junta los recibos de todos los celulares sin revivir los borrados */
+var RECSNAP={};
+function recSinMod(r){var o=Object.assign({},r);delete o.mod;return JSON.stringify(o);}
+function recFoto(){RECSNAP={};REC.forEach(function(r){if(r&&r.id)RECSNAP[r.id]=recSinMod(r);});}
+function recBajas(){try{var o=JSON.parse(localStorage.getItem(RBAJAS)||'{}');return o&&typeof o==='object'&&!Array.isArray(o)?o:{};}catch(e){return {};}}
+function guardarRecibos(){var t=Date.now(),vivos={},bj=null;
+  REC.forEach(function(r){if(!r||!r.id)return;vivos[r.id]=1;var j=recSinMod(r);if(RECSNAP[r.id]!==j){r.mod=t;RECSNAP[r.id]=j;}});
+  Object.keys(RECSNAP).forEach(function(id){if(!vivos[id]){bj=bj||recBajas();bj[id]=t;delete RECSNAP[id];}});
+  try{if(bj)localStorage.setItem(RBAJAS,JSON.stringify(bj));localStorage.setItem(RKEY,JSON.stringify(REC));}catch(e){if(A){A.status='No se pudo guardar en este navegador (memoria local llena o bloqueada).';refreshFoot();}}}
+/* junta los recibos de otro celular (del respaldo): gana el más reciente; un borrado gana si es posterior al último cambio */
+function juntarRecibos(rem,bajasRem){
+  var bj=recBajas(),porId={},n=0,ed=(A&&A.recEdit!=null&&REC[A.recEdit])?REC[A.recEdit].id:null;
+  Object.keys(bajasRem&&typeof bajasRem==='object'?bajasRem:{}).forEach(function(id){var t=+bajasRem[id]||0;if(t>(+bj[id]||0))bj[id]=t;});
+  REC.forEach(function(r){if(r&&r.id)porId[r.id]=r;});
+  (Array.isArray(rem)?rem:[]).forEach(function(x){if(!x||typeof x!=='object'||!x.id)return;var l=porId[x.id];
+    if(!l){if((+bj[x.id]||0)>=(+x.mod||0)&&bj[x.id])return;REC.push(x);porId[x.id]=x;n++;}
+    else if((+x.mod||0)>(+l.mod||0)){REC[REC.indexOf(l)]=x;porId[x.id]=x;n++;}});
+  for(var i=REC.length-1;i>=0;i--){var r=REC[i],tb=r&&r.id?+bj[r.id]||0:0;if(tb&&tb>=(+r.mod||0)){REC.splice(i,1);n++;}}
+  if(n){REC.sort(function(a,b){return String(b.creado||'').localeCompare(String(a.creado||''));});recFoto();
+    if(A){A.recMas=null;A.recEdit=ed?(REC.findIndex(function(r){return r.id===ed;})>=0?REC.findIndex(function(r){return r.id===ed;}):null):A.recEdit;}}
+  try{localStorage.setItem(RBAJAS,JSON.stringify(bj));if(n)localStorage.setItem(RKEY,JSON.stringify(REC));}catch(e){}
+  return n;
+}
+var REC=cargarRecibos();recFoto();
 var TABS=[['fechas','Fechas'],['recibos','Recibos'],['rentas','Rentas'],['stats','Estadísticas'],['paquetes','Paquetes'],['extras','Proveedores y extras'],['acomodo','Acomodo'],['ajustes','Ajustes']];
 var COLAB_TABS=['fechas','paquetes','extras','ajustes'];
 var COLAB_TABS_LBL={fechas:'Bloquear/liberar fechas',paquetes:'Editar paquetes y precios',extras:'Editar proveedores y extras',ajustes:'Ajustes generales del negocio'};
@@ -3544,8 +3566,9 @@ function claveDesdeLink(t){
     localStorage.setItem(KEY_K,po.k);if(po.reglas)privGuardar({reglas:po.reglas,costos:po.costos||{}});return true;}catch(e){return false;}
 }
 function respContenido(){
-  var o={tipo:'kalli-respaldo',version:3,app:D.negocio.nombre};
+  var o={tipo:'kalli-respaldo',version:4,app:D.negocio.nombre};
   try{o.recibos=JSON.parse(localStorage.getItem(RKEY)||'null');}catch(e){o.recibos=null;}
+  o.bajas=recBajas();
   try{o.privado=JSON.parse(localStorage.getItem(PRIV_KEY)||'null');}catch(e){o.privado=null;}
   return o;
 }
@@ -3581,12 +3604,21 @@ function respBanner(){
   var txt=(k&&r&&r.f)?'Último respaldo: '+respFecha(r.f.slice(0,10))+'.':'';
   return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center"><span style="flex:1 1 220px">'+txt+'</span><span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button>'+(k?'<button type="button" class="btn btn-ghost sm" data-a="resp-link">🔑 Mi link privado</button>':'<button type="button" class="btn btn-ghost sm" data-a="resp-nueva">🔑 Crear link privado</button>')+'</span></div>';
 }
+/* trae al celular los recibos del respaldo (de tus otros celulares) y los junta con los de aquí */
+async function juntarDeNube(){
+  var k=claveResp(),r=respActual();if(!k||!r||!r.b)return 0;
+  var o=JSON.parse(await descifrarResp(r.b,k));if(!o||o.tipo!=='kalli-respaldo')return 0;
+  var n=juntarRecibos(o.recibos,o.bajas);
+  try{if(o.privado&&!localStorage.getItem(PRIV_KEY))localStorage.setItem(PRIV_KEY,JSON.stringify(o.privado));}catch(e){}
+  return n;
+}
 async function respaldarNube(manual){
   var k=claveResp();
   if(!k&&manual){A.respUI={t:'clave',next:'respaldar'};renderAdmin(true);var ti=document.getElementById('resp-in');if(ti)ti.focus({preventScroll:false});return false;}
   if(!k)return false;
   if(A.dirty||A.busy||autoPubT){if(manual){A.status='Tienes cambios sin publicar. Publícalos o descártalos y luego respalda.';refreshFoot();renderAdmin(true);}return false;}
   try{
+    try{await juntarDeNube();}catch(e0){}
     var txt=JSON.stringify(respContenido()),h=await hashTxt(txt),r=respActual();
     if(r&&r.h===h){if(manual){A.status='Ya estaba respaldado: no hay cambios nuevos.';refreshFoot();renderAdmin(true);}return false;}
     var blob=await cifrarResp(txt,k);
@@ -3626,7 +3658,7 @@ async function respOk(){
   }
   if(u.t==='confirmar'){
     var o=u.o;A.respUI=null;
-    try{if(o.recibos)localStorage.setItem(RKEY,JSON.stringify(o.recibos));if(o.privado)localStorage.setItem(PRIV_KEY,JSON.stringify(o.privado));location.reload();}
+    try{if(o.recibos)localStorage.setItem(RKEY,JSON.stringify(o.recibos));if(o.bajas)localStorage.setItem(RBAJAS,JSON.stringify(o.bajas));if(o.privado)localStorage.setItem(PRIV_KEY,JSON.stringify(o.privado));location.reload();}
     catch(e){A.status='No se pudo guardar el respaldo en este dispositivo.';refreshFoot();renderAdmin(true);}
   }
 }
@@ -3739,6 +3771,7 @@ function abrirAdmin(){
   if(!A){
     A={tab:'recibos',draft:clone(D),mes:iso(new Date(hoy.getFullYear(),hoy.getMonth(),1)),dirty:false,confirm:null,status:'',busy:false,recover:null,soyDueno:true,tabsPermitidos:null};
     privAplicar(A.draft);A.privPend=!!D.priv;A.privBloq=false;A.privProm=privAbrir();
+    juntarDeNube().then(function(n){if(n&&A){A.status=A.status||'Se juntaron los recibos de tus otros celulares.';renderAdmin(true);refreshFoot();}}).catch(function(){});
     try{var r=sessionStorage.getItem(STASH);if(r){if(r===JSON.stringify(D))sessionStorage.removeItem(STASH);else A.recover=JSON.parse(r);}}catch(e){}
     resolverRol();
   }
