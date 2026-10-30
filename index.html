@@ -1717,23 +1717,26 @@ function mensaje(){
 }
 /* Estado de la cotización en el link: solo ids y números; nunca se publica. */
 function kB64(){var o={f:S.fecha,h:S.horario,i:S.invitados,p:S.paquete,t:S.tipo,a:S.acomodo,it:S.items,e:S.elem,o:S.opc,m:S.mix,sa:S.sinAuto,n:nomLimpio(),w:String(S.telefono||'').trim(),x:String(S.notas||'').trim().slice(0,200),fa:S.factura?1:0,or:S.origen,fo:S.folio};Object.keys(o).forEach(function(k){var v=o[k];if(v===''||v==null||v===0||(typeof v==='object'&&!Object.keys(v).length))delete o[k];});return recB64(o);}
-/* Link corto v298 (#q=): 2.AAMMDD.HH[MM].invitados.paquete.folio(sufijo).teléfono(base 36).tipo(n.º de lista).extras(id~cant_id…)[.resto]
+/* Link corto (#q=). v302+: 3. = igual que 2. con un campo más tras extras: opciones como posiciones de su lista (opcQ). v298: 2.AAMMDD.HH[MM].invitados.paquete.folio(sufijo).teléfono(base 36).tipo(n.º de lista).extras(id~cant_id…)[.resto]
    resto (base64url, sin vacíos del final) = [nombre,acomodo,elementos,opciones,mezcla,sinAuto,factura,origen,tipo escrito,folio completo,teléfono]. Las notas van en el texto del mensaje. */
+/* Opciones elegidas (guisados, bebidas…) como posiciones: «n.º del extra en la lista de extras~guisados~…», p. ej. «0~135~024». Lo que no cabe así va en el resto (base64). */
+function opcQ(ids){var out=[],rest={};Object.keys(S.opc||{}).forEach(function(id){var it=item(id),o=S.opc[id],ix=ids.indexOf(id);if(!it||!it.opciones||!o||typeof o!=='object')return;var ok=ix>=0&&ix<36,gs=it.opciones.map(function(g){return (o[g.id]||[]).map(function(n){var k=(g.lista||[]).indexOf(n);if(k<0||k>35)ok=false;return k.toString(36);}).join('');});if(ok&&gs.join(''))out.push(ix.toString(36)+'~'+gs.join('~'));else if(Object.keys(o).length)rest[id]=o;});return {q:out.join('_'),rest:rest};}
+function opcDeQ(q,ids){var o={};String(q||'').split('_').forEach(function(x){if(!x)return;var p=x.split('~'),id=ids[parseInt(p.shift(),36)],it=id&&item(id);if(!it||!it.opciones)return;var r={};it.opciones.forEach(function(g,gi){var cs=String(p[gi]||'').split('').map(function(c){return (g.lista||[])[parseInt(c,36)];}).filter(Boolean);if(cs.length)r[g.id]=cs;});if(Object.keys(r).length)o[id]=r;});return o;}
 function kQ(){
   var f=String(S.fecha||'').slice(2).replace(/-/g,''),hh=String(S.horario||'').replace(':',''),fo=S.folio||'',fs=(new RegExp('^KT-'+f+'-([A-Z0-9]{1,8})$').exec(fo)||[])[1]||'',tel=String(S.telefono||'').replace(/\D/g,''),t36=/^[1-9]\d{6,14}$/.test(tel)?parseInt(tel,10).toString(36):'';
-  var ti=S.tipo?D.tiposEvento.indexOf(S.tipo):-1,its=Object.keys(S.items||{}).filter(function(id){return /^[a-z0-9-]+$/.test(id)&&+S.items[id]>0;}).map(function(id){var q=Math.round(+S.items[id]);return id+(q!==1?'~'+q:'');}).join('_');
+  var ti=S.tipo?D.tiposEvento.indexOf(S.tipo):-1,ids=Object.keys(S.items||{}).filter(function(id){return /^[a-z0-9-]+$/.test(id)&&+S.items[id]>0;}),its=ids.map(function(id){var q=Math.round(+S.items[id]);return id+(q!==1?'~'+q:'');}).join('_');
   var vac=function(v){return v==null||v===''||v===0||(typeof v==='object'&&!Object.keys(v).length);};
-  var r=[nomLimpio(),S.acomodo,S.elem,S.opc,S.mix,S.sinAuto,S.factura?1:0,S.origen,ti<0?S.tipo:'',fs?'':fo,t36?'':tel].map(function(v){return vac(v)?0:v;});
+  var oq=opcQ(ids),r=[nomLimpio(),S.acomodo,S.elem,oq.rest,S.mix,S.sinAuto,S.factura?1:0,S.origen,ti<0?S.tipo:'',fs?'':fo,t36?'':tel].map(function(v){return vac(v)?0:v;});
   while(r.length&&r[r.length-1]===0)r.pop();
-  return ['2',f,/00$/.test(hh)?hh.slice(0,2):hh,S.invitados,S.paquete||'',fs,t36,ti<0?'':ti.toString(36),its].join('.')+(r.length?'.'+recB64(r):'');
+  return ['3',f,/00$/.test(hh)?hh.slice(0,2):hh,S.invitados,S.paquete||'',fs,t36,ti<0?'':ti.toString(36),its,oq.q].join('.')+(r.length?'.'+recB64(r):'');
 }
-function objDeQ(b){var p=String(b||'').split('.');if(p[0]!=='2'||p.length<9||!/^\d{6}$/.test(p[1])||!/^\d{2}(\d{2})?$/.test(p[2]))return null;
+function objDeQ(b){var p=String(b||'').split('.'),v3=p[0]==='3',oq3={};if(v3){oq3=opcDeQ(p[9],String(p[8]||'').split('_').map(function(x){return x.split('~')[0];}));p.splice(9,1);p[0]='2';}if(p[0]!=='2'||p.length<9||!/^\d{6}$/.test(p[1])||!/^\d{2}(\d{2})?$/.test(p[2]))return null;
   var r=[];if(p[9]){try{r=JSON.parse(decodeURIComponent(escape(atob(p[9].replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}if(!Array.isArray(r))return null;}
   var v=function(i){var x=r[i];return x===0||x==null?null:x;},it={};
   p[8].split('_').forEach(function(x){var m=/^([a-z0-9-]+)(?:~(\d{1,4}))?$/.exec(x);if(m)it[m[1]]=m[2]?+m[2]:1;});
   var ti=/^[0-9a-z]$/.test(p[7])?D.tiposEvento[parseInt(p[7],36)]:null;
-  return {f:'20'+p[1].slice(0,2)+'-'+p[1].slice(2,4)+'-'+p[1].slice(4,6),h:p[2].slice(0,2)+':'+(p[2].slice(2)||'00'),i:+p[3],p:p[4],t:ti||v(8),it:it,a:v(1),e:v(2),o:v(3),m:v(4),sa:v(5),n:v(0),w:/^[0-9a-z]{1,11}$/.test(p[6])?parseInt(p[6],36).toString():(v(10)||''),fa:v(6),or:v(7),fo:/^[A-Z0-9]{1,8}$/.test(p[5])?'KT-'+p[1]+'-'+p[5]:v(9)};}
-function estadoDeK(b){var o=null;if(/^2\./.test(String(b||'')))o=objDeQ(b);else try{o=JSON.parse(decodeURIComponent(escape(atob(String(b||'').replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}
+  return {f:'20'+p[1].slice(0,2)+'-'+p[1].slice(2,4)+'-'+p[1].slice(4,6),h:p[2].slice(0,2)+':'+(p[2].slice(2)||'00'),i:+p[3],p:p[4],t:ti||v(8),it:it,a:v(1),e:v(2),o:(function(){var x=Object.assign({},v(3)||{},oq3);return Object.keys(x).length?x:null;})(),m:v(4),sa:v(5),n:v(0),w:/^[0-9a-z]{1,11}$/.test(p[6])?parseInt(p[6],36).toString():(v(10)||''),fa:v(6),or:v(7),fo:/^[A-Z0-9]{1,8}$/.test(p[5])?'KT-'+p[1]+'-'+p[5]:v(9)};}
+function estadoDeK(b){var o=null;if(/^[23]\./.test(String(b||'')))o=objDeQ(b);else try{o=JSON.parse(decodeURIComponent(escape(atob(String(b||'').replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}
   if(!o||typeof o!=='object'||!fechaValida(o.f))return null;
   var ki=Math.round(+o.i);if(!(ki>=1&&ki<=capacidad()))return null;
   if(!o.p||!D.paquetes.some(function(x){return x.id===o.p;}))return null;
