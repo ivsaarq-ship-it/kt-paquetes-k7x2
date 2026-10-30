@@ -486,7 +486,10 @@ details.cat>summary{min-height:48px}
 .item .mas summary{display:inline-flex;min-height:44px;padding:0}
 label.chk{min-height:44px}
 .chk input{margin:0 2px}
-.terms-miss{border:2px solid #c0392b!important;background:#fdecea!important;border-radius:12px}</style>
+.terms-miss{border:2px solid #c0392b!important;background:#fdecea!important;border-radius:12px}
+@keyframes pulsoEnviar{0%,100%{box-shadow:0 0 0 0 rgba(232,163,61,.75)}50%{box-shadow:0 0 0 12px rgba(232,163,61,0)}}
+.btn-main.listo{animation:pulsoEnviar 1.3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.btn-main.listo{animation:none}}</style>
 </head>
 <body>
 <div id="app"></div>
@@ -1746,10 +1749,11 @@ function waContacto(w){return 'https://wa.me/'+String(w||D.negocio.whatsapp).rep
 function waUrl(){return 'https://wa.me/'+String(D.negocio.whatsapp).replace(/\D/g,'')+'?text='+encodeURIComponent(mensaje());}
 function updateSend(){
   var ok=validSend(),url=ok?waUrl():null;
-  ['wa','wa2'].forEach(function(id){var a=document.getElementById(id);if(!a)return;if(ok){a.href=url;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');}});
+  ['wa','wa2'].forEach(function(id){var a=document.getElementById(id);if(!a)return;a.classList.toggle('listo',ok);if(ok){a.href=url;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');}});
   var h=document.getElementById('wa-hint');
   if(h)h.textContent=ok?'Enviar abre WhatsApp con tu cotización.':(datosOk()?(faltaOpc()?faltaMsg():'Acepta los términos y condiciones para enviar.'):'Escribe tu nombre y tu número de WhatsApp de 10 dígitos (como 33 1234 5678) para enviar.');
 }
+function irATerminos(){var ft=document.getElementById('f-terms');if(!ft)return;var lb=ft.closest('label');if(!ft.checked&&lb)lb.classList.add('terms-miss');ft.focus();ft.scrollIntoView({block:'center'});}
 var toastT;
 function toast(msg){
   var el=document.getElementById('toast');
@@ -1817,7 +1821,7 @@ app.addEventListener('click',function(e){
   var ds=t.dataset,fs=selDe(t);
   if(t.id==='sug-wa'&&!sugTxt.trim()){e.preventDefault();toast('Escribe tu sugerencia primero.');var fsug=document.getElementById('f-sug');if(fsug)fsug.focus();return;}
   if(t.id==='wa'||t.id==='wa2'){
-    if(!validSend()){e.preventDefault();if(datosOk()&&faltaOpc()){toast(faltaMsg());}else if(datosOk()){toast('Acepta los términos y condiciones para enviar.');var ft=document.getElementById('f-terms');if(ft){ft.focus();ft.scrollIntoView({block:'center'});var lb=ft.closest('label');if(lb)lb.classList.add('terms-miss');}}else{toast('Escribe tu nombre y tu número de WhatsApp.');var f=document.getElementById(nomLimpio().length<2?'f-nombre':'f-tel');if(f){f.focus();f.scrollIntoView({block:'center'});}}}
+    if(!validSend()){e.preventDefault();if(datosOk()&&faltaOpc()){toast(faltaMsg());}else if(datosOk()){toast('Acepta los términos y condiciones para enviar.');irATerminos();}else{toast('Escribe tu nombre y tu número de WhatsApp.');var f=document.getElementById(nomLimpio().length<2?'f-nombre':'f-tel');if(f){f.focus();f.scrollIntoView({block:'center'});}}}
     return;
   }
   if(ds.pq){pqHacer(ds.pq);return;}
@@ -1916,13 +1920,14 @@ app.addEventListener('input',function(e){
 });
 app.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target&&e.target.id==='f-folio'){e.preventDefault();consultar();return;}
+  if(e.key==='Enter'&&e.target&&(e.target.id==='f-nombre'||e.target.id==='f-tel')&&document.getElementById('f-terms')){e.preventDefault();e.target.blur();irATerminos();return;}
   if(e.key==='Escape'){if(pkgConfirm){pkgConfirm=null;render();}else if(calOpen){calOpen=false;render();}}
 });
 var ptrC=false,pendC=false;
 document.addEventListener('pointerdown',function(){ptrC=true;},true);
 document.addEventListener('pointerup',function(){ptrC=false;setTimeout(function(){if(pendC){pendC=false;render();}},80);},true);
 document.addEventListener('pointercancel',function(){ptrC=false;if(pendC){pendC=false;render();}},true);
-app.addEventListener('change',function(e){if(e.target.id==='inv'){var tv=parseInt(e.target.value,10);setInv(tv);if(tv!==S.invitados)toast('Ajustamos a '+S.invitados+' invitados: es el mínimo o máximo para esta fecha.');if(ptrC)pendC=true;else render();}if(e.target.id==='f-terms'){S.terms=e.target.checked;var tl=e.target.closest('label');if(tl)tl.classList.toggle('terms-miss',!e.target.checked);guardar();updateSend();}});
+app.addEventListener('change',function(e){if(e.target.id==='f-terms'&&e.target.checked){var lb=e.target.closest('label');if(lb)lb.classList.remove('terms-miss');}if(e.target.id==='inv'){var tv=parseInt(e.target.value,10);setInv(tv);if(tv!==S.invitados)toast('Ajustamos a '+S.invitados+' invitados: es el mínimo o máximo para esta fecha.');if(ptrC)pendC=true;else render();}if(e.target.id==='f-terms'){S.terms=e.target.checked;var tl=e.target.closest('label');if(tl)tl.classList.toggle('terms-miss',!e.target.checked);guardar();updateSend();}});
 app.addEventListener('toggle',function(e){var d=e.target;if(d&&d.dataset&&d.dataset.ig){if(d.open)igOpen[d.dataset.ig]=1;else delete igOpen[d.dataset.ig];}if(d&&d.dataset&&d.dataset.pk){if(d.open)openPk[d.dataset.pk]=1;else delete openPk[d.dataset.pk];}if(d&&d.dataset&&d.dataset.cat){openCat[d.dataset.cat]=d.open;}},true);
 
 /* ---------- administración ---------- */
