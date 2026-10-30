@@ -2440,12 +2440,15 @@ function rentaCalc(r){
     var it=(D.items||[]).find(function(x){return x.nombre===nom;});
     if(it&&cs[it.id]!=null&&+it.precio>0)costo+=m*(+cs[it.id])/(+it.precio);});
   var ingreso=res.total-dep;
+  if(r.sinRecibo)return {total:0,abono:0,saldo:0,deposito:0,ingreso:0,costo:null,ganancia:null,sinCosto:[],estado:'Sin recibo'};
   return {total:res.total,abono:res.abono,saldo:res.saldo,deposito:dep,ingreso:ingreso,costo:hay?Math.round(costo):null,ganancia:hay?Math.round(ingreso-costo):null,sinCosto:sinCosto,estado:res.estado};
 }
 function rentasLista(){
   var per=A.rtPer||'todas',h=iso(hoy);
-  var fi=function(r){return fechaISODeTexto(r.fecha)||'';};
-  return REC.filter(function(r){var f=r&&fi(r);return f&&(per==='todas'||(per==='proximas'?f>=h:f<h));}).slice().sort(function(a,b){var x=fi(a),y=fi(b);return per==='proximas'?(x<y?-1:x>y?1:0):(x<y?1:x>y?-1:0);});
+  var fi=function(r){return r.sinRecibo?r.iso:(fechaISODeTexto(r.fecha)||'');},con={},sin=[];
+  REC.forEach(function(r){var f=r&&fechaISODeTexto(r.fecha);if(f)con[f]=1;});
+  (((A&&A.draft&&A.draft.ocupadas)||D.ocupadas)||[]).forEach(function(o){var f=String(o&&o.fecha||'');if(/^\d{4}-\d{2}-\d{2}$/.test(f)&&!con[f]){con[f]=1;sin.push({sinRecibo:true,iso:f,fecha:fechaLarga(f),cliente:'',telefono:'',lineas:[],abono:0});}});
+  return REC.concat(sin).filter(function(r){var f=r&&fi(r);return f&&(per==='todas'||(per==='proximas'?f>=h:f<h));}).slice().sort(function(a,b){var x=fi(a),y=fi(b);return per==='proximas'?(x<y?-1:x>y?1:0):(x<y?1:x>y?-1:0);});
 }
 function admRentas(){
   var per=A.rtPer||'todas',L=rentasLista(),C=L.map(rentaCalc),hay=C.some(function(c){return c.costo!=null;});
@@ -2456,9 +2459,9 @@ function admRentas(){
     '<div class="kpi"><span>Cobrado</span><strong>'+fmt(sum('abono'))+'</strong><small>'+fmt(sum('saldo'))+' por cobrar</small></div>'+
     '<div class="kpi"><span>Costo proveedores</span><strong>'+(hay?fmt(sum('costo')):'—')+'</strong><small>estimado</small></div>'+
     '<div class="kpi"><span>Ganancia</span><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong><small>sin depósitos</small></div></div>';
-  var nota='<p class="hint" style="margin:8px 0 0">Sale de los recibos guardados en este celular. Costo y ganancia son <strong>estimados</strong> con tus costos privados'+(hay?'':' (abre tu link privado en este celular para verlos)')+'; el depósito de garantía no cuenta como ganancia. Todo antes de IVA.</p>';
-  if(!L.length)return '<section class="block"><h2>Rentas</h2>'+chips+'<p class="warn">No hay recibos en este periodo.</p>'+nota+'</section>';
-  var filas=L.map(function(r,i){var c=C[i];return '<tr><td>'+esc(rtFecha(r.fecha))+'</td><td>'+esc(r.cliente||'—')+'</td><td>'+esc(r.telefono||'')+'</td><td>'+esc(reciboPaquete(r)||'')+'</td><td class="n">'+esc(String(r.invitados||''))+'</td><td class="n">'+fmt(c.total)+'</td><td class="n">'+fmt(c.abono)+'</td><td class="n">'+fmt(c.saldo)+'</td><td class="n">'+(c.costo==null?'—':fmt(c.costo))+'</td><td class="n">'+(c.ganancia==null?'—':fmt(c.ganancia))+(c.sinCosto.length?' <span title="El banquete no trae sus costos">*</span>':'')+'</td><td>'+esc(c.estado)+'</td></tr>';}).join('');
+  var nota='<p class="hint" style="margin:8px 0 0">Sale de los recibos guardados en este celular y de las fechas reservadas del calendario (las que no tienen recibo salen con «＋ Datos» para llenarlas). Costo y ganancia son <strong>estimados</strong> con tus costos privados'+(hay?'':' (abre tu link privado en este celular para verlos)')+'; el depósito de garantía no cuenta como ganancia. Todo antes de IVA.</p>';
+  if(!L.length)return '<section class="block"><h2>Rentas</h2>'+chips+'<p class="warn">No hay rentas en este periodo.</p>'+nota+'</section>';
+  var filas=L.map(function(r,i){var c=C[i];return '<tr><td>'+esc(rtFecha(r.fecha))+'</td><td>'+(r.sinRecibo?'<button type="button" class="btn btn-line sm" data-a="rt-datos" data-v="'+esc(r.iso)+'">＋ Datos</button>':esc(r.cliente||'—'))+'</td><td>'+esc(r.telefono||'')+'</td><td>'+esc(reciboPaquete(r)||'')+'</td><td class="n">'+esc(String(r.invitados||''))+'</td><td class="n">'+fmt(c.total)+'</td><td class="n">'+fmt(c.abono)+'</td><td class="n">'+fmt(c.saldo)+'</td><td class="n">'+(c.costo==null?'—':fmt(c.costo))+'</td><td class="n">'+(c.ganancia==null?'—':fmt(c.ganancia))+(c.sinCosto.length?' <span title="El banquete no trae sus costos">*</span>':'')+'</td><td>'+esc(c.estado)+'</td></tr>';}).join('');
   var tabla='<div style="overflow-x:auto"><table class="stat-t rt-t"><thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Paquete</th><th class="n">Inv.</th><th class="n">Total</th><th class="n">Abonado</th><th class="n">Saldo</th><th class="n">Costo</th><th class="n">Ganancia</th><th>Estado</th></tr></thead><tbody>'+filas+
     '<tr class="rt-tot"><td colspan="5"><strong>Total</strong></td><td class="n"><strong>'+fmt(sum('total'))+'</strong></td><td class="n"><strong>'+fmt(sum('abono'))+'</strong></td><td class="n"><strong>'+fmt(sum('saldo'))+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('costo')):'—')+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong></td><td></td></tr></tbody></table></div>';
   var aster=C.some(function(c){return c.sinCosto.length;})?'<p class="hint" style="margin:6px 0 0">* Tiene banquete o meseros: su costo no viene desglosado en el recibo, así que esa ganancia sale más alta de lo real.</p>':'';
@@ -3654,6 +3657,7 @@ function accionAdmin(a,t){
     case 'st-per':A.stPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-per':A.rtPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-excel':rentasExcel();break;
+    case 'rt-datos':{var nr=nuevoRecibo();nr.fecha=fechaLarga(t.dataset.v);nr.estado='confirmado';REC.unshift(nr);guardarRecibos();A.tab='recibos';A.recEdit=0;A.recMas=null;A.status='Llena los datos de ese evento: cliente, conceptos y lo pagado. Ya sale en Rentas.';renderAdmin(true);try{adm.querySelector('.adm-body').scrollTop=0;}catch(e){}break;}
     case 'apartado-liberar':marcarHistorial(d,(d.apartados[+t.dataset.i]||{}).folio||(d.apartados[+t.dataset.i]||{}).nota,'liberado');d.apartados.splice(+t.dataset.i,1);marcarCambio();renderAdmin(true);autoPublicar();break;
     case 'ac-sel':A.acSel=+t.dataset.i;renderAdmin();break;
     case 'ac-nuevo':{var src=d.acomodos[A.acSel||0];var cp=clone(src);cp.id=uid('ac');cp.nombre='Copia de '+(src.nombre||'acomodo');d.acomodos.push(cp);A.acSel=d.acomodos.length-1;marcarCambio();renderAdmin();break;}
