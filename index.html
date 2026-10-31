@@ -1726,23 +1726,26 @@ function kB64(){var o={f:S.fecha,h:S.horario,i:S.invitados,p:S.paquete,t:S.tipo,
 /* Link corto (#q=). v302+: 3. = igual que 2. con un campo más tras extras: opciones como posiciones de su lista (opcQ). v298: 2.AAMMDD.HH[MM].invitados.paquete.folio(sufijo).teléfono(base 36).tipo(n.º de lista).extras(id~cant_id…)[.resto]
    resto (base64url, sin vacíos del final) = [nombre,acomodo,elementos,opciones,mezcla,sinAuto,factura,origen,tipo escrito,folio completo,teléfono]. Las notas van en el texto del mensaje. */
 /* Opciones elegidas (guisados, bebidas…) como posiciones: «n.º del extra en la lista de extras~guisados~…», p. ej. «0~135~024». Lo que no cabe así va en el resto (base64). */
-function opcQ(ids){var out=[],rest={};Object.keys(S.opc||{}).forEach(function(id){var it=item(id),o=S.opc[id],ix=ids.indexOf(id);if(!it||!it.opciones||!o||typeof o!=='object')return;var ok=ix>=0&&ix<36,gs=it.opciones.map(function(g){return (o[g.id]||[]).map(function(n){var k=(g.lista||[]).indexOf(n);if(k<0||k>35)ok=false;return k.toString(36);}).join('');});if(ok&&gs.join(''))out.push(ix.toString(36)+'~'+gs.join('~'));else if(Object.keys(o).length)rest[id]=o;});return {q:out.join('_'),rest:rest};}
-function opcDeQ(q,ids){var o={};String(q||'').split('_').forEach(function(x){if(!x)return;var p=x.split('~'),id=ids[parseInt(p.shift(),36)],it=id&&item(id);if(!it||!it.opciones)return;var r={};it.opciones.forEach(function(g,gi){var cs=String(p[gi]||'').split('').map(function(c){return (g.lista||[])[parseInt(c,36)];}).filter(Boolean);if(cs.length)r[g.id]=cs;});if(Object.keys(r).length)o[id]=r;});return o;}
+/* Link «4.»: cada opción (guiso, bebida…) y el tipo de evento van por su nombre en 2 letras (hq), no por su lugar en la lista: si se reordenan o se agregan opciones, los links ya enviados siguen leyendo lo mismo. Si dos nombres de una lista dan las mismas 2 letras, esa parte va completa en el resto. */
+function hq(n){var x=String(n||'').trim().toLowerCase(),h=2166136261;for(var i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return ('0'+(h%1296).toString(36)).slice(-2);}
+function hqUnico(lista,n){var c=hq(n);return (lista||[]).filter(function(x){return hq(x)===c;}).length===1;}
+function opcQ(ids){var out=[],rest={};Object.keys(S.opc||{}).forEach(function(id){var it=item(id),o=S.opc[id],ix=ids.indexOf(id);if(!it||!it.opciones||!o||typeof o!=='object')return;var ok=ix>=0&&ix<36,gs=it.opciones.map(function(g){return (o[g.id]||[]).map(function(n){if((g.lista||[]).indexOf(n)<0||!hqUnico(g.lista,n))ok=false;return hq(n);}).join('');});if(ok&&gs.join(''))out.push(ix.toString(36)+'~'+gs.join('~'));else if(Object.keys(o).length)rest[id]=o;});return {q:out.join('_'),rest:rest};}
+function opcDeQ(q,ids,porNombre){var o={};String(q||'').split('_').forEach(function(x){if(!x)return;var p=x.split('~'),id=ids[parseInt(p.shift(),36)],it=id&&item(id);if(!it||!it.opciones)return;var r={};it.opciones.forEach(function(g,gi){var t=String(p[gi]||''),cs=porNombre?(t.match(/[0-9a-z]{2}/g)||[]).map(function(c){return (g.lista||[]).find(function(n){return hq(n)===c;});}):t.split('').map(function(c){return (g.lista||[])[parseInt(c,36)];});cs=cs.filter(Boolean);if(cs.length)r[g.id]=cs;});if(Object.keys(r).length)o[id]=r;});return o;}
 function kQ(){
   var f=String(S.fecha||'').slice(2).replace(/-/g,''),hh=String(S.horario||'').replace(':',''),fo=S.folio||'',fs=(new RegExp('^KT-'+f+'-([A-Z0-9]{1,8})$').exec(fo)||[])[1]||'',tel=String(S.telefono||'').replace(/\D/g,''),t36=/^[1-9]\d{6,14}$/.test(tel)?parseInt(tel,10).toString(36):'';
-  var ti=S.tipo?D.tiposEvento.indexOf(S.tipo):-1,ids=Object.keys(S.items||{}).filter(function(id){return /^[a-z0-9-]+$/.test(id)&&+S.items[id]>0;}),its=ids.map(function(id){var q=Math.round(+S.items[id]);return id+(q!==1?'~'+q:'');}).join('_');
+  var ti=S.tipo&&D.tiposEvento.indexOf(S.tipo)>=0&&hqUnico(D.tiposEvento,S.tipo)?hq(S.tipo):'',ids=Object.keys(S.items||{}).filter(function(id){return /^[a-z0-9-]+$/.test(id)&&+S.items[id]>0;}),its=ids.map(function(id){var q=Math.round(+S.items[id]);return id+(q!==1?'~'+q:'');}).join('_');
   var vac=function(v){return v==null||v===''||v===0||(typeof v==='object'&&!Object.keys(v).length);};
-  var oq=opcQ(ids),r=[nomLimpio(),S.acomodo,S.elem,oq.rest,S.mix,S.sinAuto,S.factura?1:0,S.origen,ti<0?S.tipo:'',fs?'':fo,t36?'':tel].map(function(v){return vac(v)?0:v;});
+  var oq=opcQ(ids),r=[nomLimpio(),S.acomodo,S.elem,oq.rest,S.mix,S.sinAuto,S.factura?1:0,S.origen,ti?'':S.tipo,fs?'':fo,t36?'':tel].map(function(v){return vac(v)?0:v;});
   while(r.length&&r[r.length-1]===0)r.pop();
-  return ['3',f,/00$/.test(hh)?hh.slice(0,2):hh,S.invitados,S.paquete||'',fs,t36,ti<0?'':ti.toString(36),its,oq.q].join('.')+(r.length?'.'+recB64(r):'');
+  return ['4',f,/00$/.test(hh)?hh.slice(0,2):hh,S.invitados,S.paquete||'',fs,t36,ti,its,oq.q].join('.')+(r.length?'.'+recB64(r):'');
 }
-function objDeQ(b){var p=String(b||'').split('.'),v3=p[0]==='3',oq3={};if(v3){oq3=opcDeQ(p[9],String(p[8]||'').split('_').map(function(x){return x.split('~')[0];}));p.splice(9,1);p[0]='2';}if(p[0]!=='2'||p.length<9||!/^\d{6}$/.test(p[1])||!/^\d{2}(\d{2})?$/.test(p[2]))return null;
+function objDeQ(b){var p=String(b||'').split('.'),v4=p[0]==='4',v3=p[0]==='3'||v4,oq3={};if(v3){oq3=opcDeQ(p[9],String(p[8]||'').split('_').map(function(x){return x.split('~')[0];}),v4);p.splice(9,1);p[0]='2';}if(p[0]!=='2'||p.length<9||!/^\d{6}$/.test(p[1])||!/^\d{2}(\d{2})?$/.test(p[2]))return null;
   var r=[];if(p[9]){try{r=JSON.parse(decodeURIComponent(escape(atob(p[9].replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}if(!Array.isArray(r))return null;}
   var v=function(i){var x=r[i];return x===0||x==null?null:x;},it={};
   p[8].split('_').forEach(function(x){var m=/^([a-z0-9-]+)(?:~(\d{1,4}))?$/.exec(x);if(m)it[m[1]]=m[2]?+m[2]:1;});
-  var ti=/^[0-9a-z]$/.test(p[7])?D.tiposEvento[parseInt(p[7],36)]:null;
+  var ti=v4?(/^[0-9a-z]{2}$/.test(p[7])?D.tiposEvento.find(function(t){return hq(t)===p[7];}):null):(/^[0-9a-z]$/.test(p[7])?D.tiposEvento[parseInt(p[7],36)]:null);
   return {f:'20'+p[1].slice(0,2)+'-'+p[1].slice(2,4)+'-'+p[1].slice(4,6),h:p[2].slice(0,2)+':'+(p[2].slice(2)||'00'),i:+p[3],p:p[4],t:ti||v(8),it:it,a:v(1),e:v(2),o:(function(){var x=Object.assign({},v(3)||{},oq3);return Object.keys(x).length?x:null;})(),m:v(4),sa:v(5),n:v(0),w:/^[0-9a-z]{1,11}$/.test(p[6])?parseInt(p[6],36).toString():(v(10)||''),fa:v(6),or:v(7),fo:/^[A-Z0-9]{1,8}$/.test(p[5])?'KT-'+p[1]+'-'+p[5]:v(9)};}
-function estadoDeK(b){var o=null;if(/^[23]\./.test(String(b||'')))o=objDeQ(b);else try{o=JSON.parse(decodeURIComponent(escape(atob(String(b||'').replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}
+function estadoDeK(b){var o=null;if(/^[234]\./.test(String(b||'')))o=objDeQ(b);else try{o=JSON.parse(decodeURIComponent(escape(atob(String(b||'').replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return null;}
   if(!o||typeof o!=='object'||!fechaValida(o.f))return null;
   var ki=Math.round(+o.i);if(!(ki>=1&&ki<=capacidad()))return null;
   if(!o.p||!D.paquetes.some(function(x){return x.id===o.p;}))return null;
@@ -2454,11 +2457,25 @@ function lugarLibreMesa(ac){
 /* ---------- Admin: estadísticas (solo cotizaciones que entran con el link "Apartar") ---------- */
 /* Admin › Rentas: tabla de los recibos de este celular (cliente, teléfono, paquete, total, costo y ganancia) y descarga para Excel.
    Costo = costos de proveedores guardados en este celular (link privado) × monto / precio público del concepto. Estimado: banquete y meseros no traen sus costos por separado. */
+/* costo estimado del banquete: se separa en comida, refresco, meseros y cristalería con los precios de hoy y se reparte el monto del recibo */
+function costoBanquete(l,r,frac){
+  var norm=function(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');};
+  var inv=+((/Banquete para (\d+)/.exec(l.nombre||'')||[])[1])||+r.invitados||0,det=norm(l.detalle),partes=[];if(!inv)return null;
+  var com=(D.items||[]).filter(function(it){return it.grupo==='comida-banquete'&&det.indexOf(norm(txtSinParen(it.nombre)))>=0;}).sort(function(a,b){return b.nombre.length-a.nombre.length;})[0];
+  if(!com)return null;partes.push({id:com.id,m:precioItem(com,1,inv,true).monto});
+  if(/refresco/.test(det)&&item('refresco-hielo'))partes.push({id:'refresco-hielo',m:precioItem(item('refresco-hielo'),1,inv,true).monto});
+  if(/mesero/.test(det))partes.push({id:'mesero',m:calcStaffBanquete(inv,true).total});
+  if(/cristaler/.test(det)&&item('cristaleria'))partes.push({id:'cristaleria',m:precioItem(item('cristaleria'),1,inv,true).monto});
+  var suma=0,c=0,ok=true;partes.forEach(function(x){var f=frac(x.id);suma+=x.m;if(f==null)ok=false;else c+=x.m*f;});
+  return ok&&suma>0?Math.round(c*(+l.monto||0)/suma):null;
+}
 function rentaCalc(r){
   var pv=privLeer()||{},cs=pv.costos||{},hay=Object.keys(cs).length>0,res=reciboResumen(r),dep=0,costo=0,sinCosto=[];
+  var frac=function(id){var it=item(id);return it&&cs[id]!=null&&+it.precio>0?(+cs[id])/(+it.precio):null;};
   (r.lineas||[]).forEach(function(l){var m=+l.monto||0,nom=String(l.nombre||'');if(!m)return;
     if(/dep[oó]sito/i.test(nom)){dep+=m;return;}
-    if(/^(Banquete para |Meseros y barman)/.test(nom)){sinCosto.push(nom);return;}
+    if(/^Banquete para /.test(nom)){var cb=costoBanquete(l,r,frac);if(cb==null)sinCosto.push(nom);else costo+=cb;return;}
+    if(/^Meseros y barman/.test(nom)){var fm=frac('mesero');if(fm==null)sinCosto.push(nom);else costo+=m*fm;return;}
     var it=(D.items||[]).find(function(x){return x.nombre===nom;});
     if(it&&cs[it.id]!=null&&+it.precio>0)costo+=m*(+cs[it.id])/(+it.precio);});
   var ingreso=res.total-dep;
@@ -2483,10 +2500,10 @@ function admRentas(){
     '<div class="kpi"><span>Ganancia</span><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong><small>sin depósitos</small></div></div>';
   var nota='<p class="hint" style="margin:8px 0 0">Sale de los recibos guardados en este celular y de las fechas reservadas del calendario (las que no tienen recibo salen con «＋ Datos» para llenarlas). Costo y ganancia son <strong>estimados</strong> con tus costos privados'+(hay?'':' (abre tu link privado en este celular para verlos)')+'; el depósito de garantía no cuenta como ganancia. Todo antes de IVA.</p>';
   if(!L.length)return '<section class="block"><h2>Rentas</h2>'+chips+'<p class="warn">No hay rentas en este periodo.</p>'+nota+'</section>';
-  var filas=L.map(function(r,i){var c=C[i];return '<tr><td>'+esc(rtFecha(r.fecha))+'</td><td>'+(r.sinRecibo?'<button type="button" class="btn btn-line sm" data-a="rt-datos" data-v="'+esc(r.iso)+'">＋ Datos</button>':esc(r.cliente||'—'))+'</td><td>'+esc(r.telefono||'')+'</td><td>'+esc(reciboPaquete(r)||'')+'</td><td class="n">'+esc(String(r.invitados||''))+'</td><td class="n">'+fmt(c.total)+'</td><td class="n">'+fmt(c.abono)+'</td><td class="n">'+fmt(c.saldo)+'</td><td class="n">'+(c.costo==null?'—':fmt(c.costo))+'</td><td class="n">'+(c.ganancia==null?'—':fmt(c.ganancia))+(c.sinCosto.length?' <span title="El banquete no trae sus costos">*</span>':'')+'</td><td>'+esc(c.estado)+'</td></tr>';}).join('');
+  var filas=L.map(function(r,i){var c=C[i];return '<tr><td>'+esc(rtFecha(r.fecha))+'</td><td>'+(r.sinRecibo?'<button type="button" class="btn btn-line sm" data-a="rt-datos" data-v="'+esc(r.iso)+'">＋ Datos</button>':esc(r.cliente||'—'))+'</td><td>'+esc(r.telefono||'')+'</td><td>'+esc(reciboPaquete(r)||'')+'</td><td class="n">'+esc(String(r.invitados||''))+'</td><td class="n">'+fmt(c.total)+'</td><td class="n">'+fmt(c.abono)+'</td><td class="n">'+fmt(c.saldo)+'</td><td class="n">'+(c.costo==null?'—':fmt(c.costo))+'</td><td class="n">'+(c.ganancia==null?'—':fmt(c.ganancia))+(c.sinCosto.length?' <span title="Falta el costo del banquete o de los meseros">*</span>':'')+'</td><td>'+esc(c.estado)+'</td></tr>';}).join('');
   var tabla='<div style="overflow-x:auto"><table class="stat-t rt-t"><thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Paquete</th><th class="n">Inv.</th><th class="n">Total</th><th class="n">Abonado</th><th class="n">Saldo</th><th class="n">Costo</th><th class="n">Ganancia</th><th>Estado</th></tr></thead><tbody>'+filas+
     '<tr class="rt-tot"><td colspan="5"><strong>Total</strong></td><td class="n"><strong>'+fmt(sum('total'))+'</strong></td><td class="n"><strong>'+fmt(sum('abono'))+'</strong></td><td class="n"><strong>'+fmt(sum('saldo'))+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('costo')):'—')+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong></td><td></td></tr></tbody></table></div>';
-  var aster=C.some(function(c){return c.sinCosto.length;})?'<p class="hint" style="margin:6px 0 0">* Tiene banquete o meseros: su costo no viene desglosado en el recibo, así que esa ganancia sale más alta de lo real.</p>':'';
+  var aster=C.some(function(c){return c.sinCosto.length;})?'<p class="hint" style="margin:6px 0 0">* Tiene banquete o meseros y no encontré su costo (falta en tus costos privados o el recibo no dice qué comida lleva): esa ganancia sale más alta de lo real.</p>':'';
   return '<section class="block"><h2>Rentas</h2>'+chips+kpis+tabla+aster+
     '<div class="adm-btns" style="margin-top:12px"><button type="button" class="btn btn-main sm" data-a="rt-excel">⬇ Descargar para Excel</button></div>'+nota+'</section>';
 }
@@ -3599,10 +3616,19 @@ function respPanel(){
   h+='<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn btn-main sm" data-a="resp-ok">'+(u.t==='clave'?'Activar':u.t==='texto'?'Continuar':'Sí, restaurar')+'</button><button type="button" class="btn btn-ghost sm" data-a="resp-cancel">Cancelar</button></div></div>';
   return h;
 }
+/* ¿lo de este celular ya está en el respaldo? (A.respSinc: true, false o null = sin revisar) */
+var respRevT=null;
+function respRevisar(){clearTimeout(respRevT);respRevT=setTimeout(async function(){
+  if(!A)return;var k=claveResp(),r=respActual(),v=null;
+  try{if(k){var oc=respContenido();v=!!(r&&(r.hr?r.hr===await hashTxt(JSON.stringify([oc.recibos,oc.bajas])):r.h===await hashTxt(JSON.stringify(oc))));}}catch(e){v=null;}
+  if(v!==A.respSinc){A.respSinc=v;var el=document.getElementById('resp-est');if(el)el.outerHTML=respEstado();}
+},400);}
+function respEstado(){var r=respActual(),k=claveResp();
+  if(k&&A&&A.respSinc===false)return '<span id="resp-est" style="flex:1 1 220px;color:var(--busy);font-weight:700">⚠ Sin respaldar: hay recibos o cambios de este celular que tus otros celulares no ven. Toca «Respaldar» (o «Cerrar» al terminar).</span>';
+  return '<span id="resp-est" style="flex:1 1 220px">'+((k&&r&&r.f)?'Último respaldo: '+respFecha(r.f.slice(0,10))+'.':'')+'</span>';}
 function respBanner(){
-  var r=respActual(),k=claveResp();
-  var txt=(k&&r&&r.f)?'Último respaldo: '+respFecha(r.f.slice(0,10))+'.':'';
-  return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center"><span style="flex:1 1 220px">'+txt+'</span><span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button>'+(k?'<button type="button" class="btn btn-ghost sm" data-a="resp-link">🔑 Mi link privado</button>':'<button type="button" class="btn btn-ghost sm" data-a="resp-nueva">🔑 Crear link privado</button>')+'</span></div>';
+  var k=claveResp();respRevisar();
+  return respPanel()+'<div class="hint" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center">'+respEstado()+'<span style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-main sm" data-a="respaldar">Respaldar</button><button type="button" class="btn btn-ghost sm" data-a="restaurar">Restaurar</button>'+(k?'<button type="button" class="btn btn-ghost sm" data-a="resp-link">🔑 Mi link privado</button>':'<button type="button" class="btn btn-ghost sm" data-a="resp-nueva">🔑 Crear link privado</button>')+'</span></div>';
 }
 /* trae al celular los recibos del respaldo (de tus otros celulares) y los junta con los de aquí */
 async function juntarDeNube(){
@@ -3622,7 +3648,7 @@ async function respaldarNube(manual){
     var txt=JSON.stringify(respContenido()),h=await hashTxt(txt),r=respActual();
     if(r&&r.h===h){if(manual){A.status='Ya estaba respaldado: no hay cambios nuevos.';refreshFoot();renderAdmin(true);}return false;}
     var blob=await cifrarResp(txt,k);
-    A.draft.respaldo={f:new Date().toISOString(),h:h,b:blob};
+    var oc=JSON.parse(txt);A.draft.respaldo={f:new Date().toISOString(),h:h,hr:await hashTxt(JSON.stringify([oc.recibos,oc.bajas])),b:blob};
     marcarCambio();A.status='Respaldando…';refreshFoot();
     if(!manual)A.sinReabrir=true;
     var ok=autoPublicar();if(!ok){A.sinReabrir=false;}if(!ok&&manual)renderAdmin(true);
