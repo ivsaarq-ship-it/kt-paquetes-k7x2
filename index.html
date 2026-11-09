@@ -1329,7 +1329,7 @@ function v2(){
       }else{
         var rv=calcRentaVenue(inv,S.fecha),extra=previewAuto(p,inv),tot=rv.total+extra;
         priceBlock='<div class="price"><span class="big">'+fmt(Math.round(tot))+'</span><span class="unit">para '+inv+' invitados · '+(+p.horas)+' h de evento'+(+p.cortesia?' <b>+ '+p.cortesia+' h de regalo</b>':'')+'</span>'+ivaSpan(Math.round(tot))+'</div>';
-        calcLine='';
+        calcLine=rv.promo?'<p class="calc-line">🎉 <strong>Promoción:</strong> antes <s>'+fmt(Math.round(rv.antes+extra))+'</s><span class="note">Válida para eventos hasta el '+fechaLarga(D.reglas.promoFin).toLowerCase()+'.</span></p>':'';
       }
     }else{
       var n=p.tipo==='persona'?Math.max(inv,+p.minimo||0):0;
@@ -3344,10 +3344,10 @@ function precioPaqueteImg(p,inv,fecha){
     var dep=depositoTotal(p,inv);
     if(esContactoChico())return {chico:true,total:0,dep:depositoTexto(false,p,inv),depM:dep};
     var paq;
-    if(p.formula==='dia'){var rv=calcRentaVenue(inv,fecha);paq=Math.round(rv.total+previewAuto(p,inv));}
+    var antes=0;if(p.formula==='dia'){var rv=calcRentaVenue(inv,fecha);paq=Math.round(rv.total+previewAuto(p,inv));if(rv.promo)antes=Math.round(rv.antes+previewAuto(p,inv));}
     else{var pct0=pctDia(),n=p.tipo==='persona'?Math.max(inv,+p.minimo||0):0,monto=p.tipo==='persona'?p.precio*n:+p.precio;paq=Math.round(monto*(1+pct0/100));}
     var pt=requierePagoTotal(fecha),pc=pt?100:(+D.negocio.anticipoPct||0),gran=paq+dep;
-    return {chico:false,total:paq,depM:dep,gran:gran,pagoTotal:pt,pct:pc,anticipo:Math.round(gran*pc/100),dep:depositoTexto(false,p,inv)};
+    return {chico:false,total:paq,depM:dep,gran:gran,pagoTotal:pt,pct:pc,anticipo:Math.round(gran*pc/100),dep:depositoTexto(false,p,inv),antes:antes};
   }finally{S.fecha=bak.fecha;S.invitados=bak.invitados;}
 }
 function leyendaPaquetes(){return 'Todo paquete lo puedes personalizar desde la app. ¿Te interesa alguno? Dinos y te ayudamos a armarlo a tu gusto y medida.';}
@@ -3371,7 +3371,8 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
     if(p.etiqueta){var tw;f(26,true,false);tw=cx.measureText(p.etiqueta.toUpperCase()).width+40;if(real){cx.fillStyle='#DCEAE3';cx.beginPath();if(cx.roundRect)cx.roundRect(M,y,tw,48,24);else cx.rect(M,y,tw,48);cx.fill();cx.fillStyle='#2B6A58';cx.textAlign='left';cx.fillText(p.etiqueta.toUpperCase(),M+20,y+34);}y+=76;}
     texto(p.nombre,76,true,true,'#17221C',88);y+=4;
     if(p.descripcion){texto(p.descripcion,34,false,false,'#46564D',46);y+=10;}
-    var bh=pr.chico?170:(454+(pr.depM?102:0));
+    var promoTxt=!pr.chico&&pr.antes?'Promoción: antes '+fmt(pr.antes)+' · válida para eventos hasta el '+fechaLarga(D.reglas.promoFin).toLowerCase():'',promoH=promoTxt?envolver(promoTxt,26,true,false,iw-72).length*36+6:0;
+    var bh=pr.chico?170:(454+(pr.depM?102:0)+promoH);
     function fila(l,m,lp,mp,lh,col,sf){var bl=Math.max(lp,mp);if(real){f(lp,false,false);cx.fillStyle='#46564D';cx.textAlign='left';cx.fillText(l,M+36,y+bl);f(mp,true,sf);cx.fillStyle=col;cx.textAlign='right';cx.fillText(m,W-M-36,y+bl);cx.textAlign='left';}y+=lh;}
     if(real){cx.fillStyle='#FFFFFF';cx.strokeStyle='#E4BE84';cx.lineWidth=3;cx.beginPath();if(cx.roundRect)cx.roundRect(M,y,iw,bh,26);else cx.rect(M,y,iw,bh);cx.fill();cx.stroke();}
     if(pr.chico){var yy=y;y+=30;texto('A cotizar por WhatsApp',58,true,true,'#17221C',70,M+36,iw-72);texto('Para '+inv+' invitados',32,false,false,'#46564D',44,M+36,iw-72);y=yy+bh+34;}
@@ -3379,6 +3380,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
       fila('Paquete',fmt(pr.total),34,44,56,'#17221C',true);
       texto(marcaRegalo('para '+inv+' invitados · '+(+p.horas)+' h de evento'+(+p.cortesia?' + '+p.cortesia+' h de regalo':'')),26,false,false,'#46564D',36,M+36,iw-72);
       texto(fechaLarga(fecha),26,true,false,'#2B6A58',36,M+36,iw-72);
+      if(promoTxt){texto(promoTxt,26,true,false,'#A23F2C',36,M+36,iw-72);y+=6;}
       if(pr.depM){y+=10;fila('Depósito de garantía',fmt(pr.depM),34,44,56,'#17221C',true);texto('Reembolsable '+horasReemb()+' horas hábiles después del evento, si todo está en orden',26,false,false,'#46564D',36,M+36,iw-72);}
       y+=10;if(real){cx.fillStyle='#E4BE84';cx.fillRect(M+36,y,iw-72,3);}y+=18;
       fila('Subtotal',fmt(pr.gran),34,70,84,'#17221C',true);
