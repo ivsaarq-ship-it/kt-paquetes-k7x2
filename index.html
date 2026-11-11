@@ -2242,6 +2242,26 @@ function danosFotosTodas(){try{var o=JSON.parse(localStorage.getItem(DANOS_FOTOS
 function danosFotos(r){var o=r&&r.id?danosFotosTodas()[r.id]:null;return Array.isArray(o)?o.filter(Boolean):[];}
 function danosFotosGuardar(id,arr){var o=danosFotosTodas();o[id]=arr;try{localStorage.setItem(DANOS_FOTOS_KEY,JSON.stringify(o));return true;}catch(e){return false;}}
 function danosFotosQuitar(id){var o=danosFotosTodas();if(!o[id])return;delete o[id];try{localStorage.setItem(DANOS_FOTOS_KEY,JSON.stringify(o));}catch(e){}}
+/* Fotos de daños en el respaldo cifrado (si se pierde el celular, no se pierden): solo de eventos de los últimos 90 días
+   y hasta ~1.5 MB, lo más reciente primero; las demás siguen solo en este celular. */
+var DF_RESP_DIAS=90,DF_RESP_MAX=1500000;
+function danosFotosValidas(a){return (Array.isArray(a)?a:[]).filter(function(x){return typeof x==='string'&&x.indexOf('data:image/')===0;}).slice(0,12);}
+function danosFotosParaRespaldo(recs){
+  var todas=danosFotosTodas(),lim=iso(new Date(hoy.getTime()-DF_RESP_DIAS*86400000)),fe={},out={},usado=0;
+  (Array.isArray(recs)?recs:[]).forEach(function(r){if(r&&r.id)fe[r.id]=fechaISODeTexto(r.fecha)||'';});
+  Object.keys(todas).filter(function(id){return fe[id]!==undefined&&danosFotosValidas(todas[id]).length&&(!fe[id]||fe[id]>=lim);})
+    .sort(function(a,b){var x=fe[a]||'9999',y=fe[b]||'9999';return x<y?1:x>y?-1:0;})
+    .forEach(function(id){var a=danosFotosValidas(todas[id]),n=a.reduce(function(s,x){return s+x.length;},0);if(usado+n<=DF_RESP_MAX){out[id]=a;usado+=n;}});
+  return out;
+}
+/* trae del respaldo las fotos de daños de los recibos de este celular que no las tienen */
+function danosFotosJuntar(df){
+  if(!df||typeof df!=='object')return 0;var todas=danosFotosTodas(),ids={},n=0;
+  REC.forEach(function(r){if(r&&r.id)ids[r.id]=1;});
+  Object.keys(df).forEach(function(id){var a=danosFotosValidas(df[id]);if(ids[id]&&a.length&&!danosFotosValidas(todas[id]).length){todas[id]=a;n++;}});
+  if(n){try{localStorage.setItem(DANOS_FOTOS_KEY,JSON.stringify(todas));}catch(e){return 0;}}
+  return n;
+}
 /* depósito que dejó el cliente: el renglón «Depósito…» de su recibo (incluye cristalería); si no hay, el de Ajustes */
 function depositoDeRecibo(r){return (r.lineas||[]).filter(esDeposito).reduce(function(a,l){return a+(+l.monto||0);},0)||(+D.negocio.depositoGarantia||0);}
 function sumaHabiles(d,n){d=new Date(d.getTime());while(n>0){d.setDate(d.getDate()+1);if(d.getDay()!==0&&d.getDay()!==6)n--;}return d;}
@@ -3767,6 +3787,7 @@ function respContenido(){
   try{o.recibos=JSON.parse(localStorage.getItem(RKEY)||'null');}catch(e){o.recibos=null;}
   o.bajas=recBajas();
   try{o.privado=JSON.parse(localStorage.getItem(PRIV_KEY)||'null');}catch(e){o.privado=null;}
+  var df=danosFotosParaRespaldo(o.recibos);if(Object.keys(df).length)o.danosFotos=df;
   return o;
 }
 function respActual(){return (A&&A.draft&&A.draft.respaldo)||D.respaldo||null;}
@@ -3800,7 +3821,7 @@ function respPanel(){
 var respRevT=null;
 function respRevisar(){clearTimeout(respRevT);respRevT=setTimeout(async function(){
   if(!A)return;var k=claveResp(),r=respActual(),v=null;
-  try{if(k){var oc=respContenido();v=!!(r&&(r.hr?r.hr===await hashTxt(JSON.stringify([oc.recibos,oc.bajas])):r.h===await hashTxt(JSON.stringify(oc))));}}catch(e){v=null;}
+  try{if(k){var oc=respContenido();v=!!(r&&(r.hr?r.hr===await hashTxt(JSON.stringify([oc.recibos,oc.bajas])):r.h===await hashTxt(JSON.stringify(oc))));if(v&&r&&r.hr)v=r.hf?r.hf===await hashTxt(JSON.stringify(oc.danosFotos||{})):!oc.danosFotos;}}catch(e){v=null;}
   if(v!==A.respSinc){A.respSinc=v;var el=document.getElementById('resp-est');if(el)el.outerHTML=respEstado();}
 },400);}
 function respEstado(){var r=respActual(),k=claveResp();
@@ -3816,6 +3837,7 @@ async function juntarDeNube(){
   var o=JSON.parse(await descifrarResp(r.b,k));if(!o||o.tipo!=='kalli-respaldo')return 0;
   var n=juntarRecibos(o.recibos,o.bajas);
   try{if(o.privado&&!localStorage.getItem(PRIV_KEY))localStorage.setItem(PRIV_KEY,JSON.stringify(o.privado));}catch(e){}
+  danosFotosJuntar(o.danosFotos);
   return n;
 }
 async function respaldarNube(manual){
@@ -3828,7 +3850,7 @@ async function respaldarNube(manual){
     var txt=JSON.stringify(respContenido()),h=await hashTxt(txt),r=respActual();
     if(r&&r.h===h){if(manual){A.status='Ya estaba respaldado: no hay cambios nuevos.';refreshFoot();renderAdmin(true);}return false;}
     var blob=await cifrarResp(txt,k);
-    var oc=JSON.parse(txt);A.draft.respaldo={f:new Date().toISOString(),h:h,hr:await hashTxt(JSON.stringify([oc.recibos,oc.bajas])),b:blob};
+    var oc=JSON.parse(txt);A.draft.respaldo={f:new Date().toISOString(),h:h,hr:await hashTxt(JSON.stringify([oc.recibos,oc.bajas])),b:blob};if(oc.danosFotos)A.draft.respaldo.hf=await hashTxt(JSON.stringify(oc.danosFotos));
     marcarCambio();A.status='Respaldando…';refreshFoot();
     if(!manual)A.sinReabrir=true;
     var ok=autoPublicar();if(!ok){A.sinReabrir=false;}if(!ok&&manual)renderAdmin(true);
@@ -3864,7 +3886,7 @@ async function respOk(){
   }
   if(u.t==='confirmar'){
     var o=u.o;A.respUI=null;
-    try{if(o.recibos)localStorage.setItem(RKEY,JSON.stringify(o.recibos));if(o.bajas)localStorage.setItem(RBAJAS,JSON.stringify(o.bajas));if(o.privado)localStorage.setItem(PRIV_KEY,JSON.stringify(o.privado));location.reload();}
+    try{if(o.recibos)localStorage.setItem(RKEY,JSON.stringify(o.recibos));if(o.bajas)localStorage.setItem(RBAJAS,JSON.stringify(o.bajas));if(o.privado)localStorage.setItem(PRIV_KEY,JSON.stringify(o.privado));if(o.danosFotos&&typeof o.danosFotos==='object'){try{var tfR=danosFotosTodas();Object.keys(o.danosFotos).forEach(function(id){var fa=danosFotosValidas(o.danosFotos[id]);if(fa.length)tfR[id]=fa;});localStorage.setItem(DANOS_FOTOS_KEY,JSON.stringify(tfR));}catch(e2){}}location.reload();}
     catch(e){A.status='No se pudo guardar el respaldo en este dispositivo.';refreshFoot();renderAdmin(true);}
   }
 }
