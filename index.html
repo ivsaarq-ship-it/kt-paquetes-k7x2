@@ -159,7 +159,7 @@ details.cat>.items{margin-top:12px}
 .day:disabled{background:transparent;color:var(--ink-3);font-weight:400;cursor:default}
 .day.busy{background:var(--busy-soft);color:var(--busy);text-decoration:line-through}
 .day.held{background:var(--gold-soft);color:var(--gold-ink);text-decoration:line-through}
-.rt-t td,.rt-t th{white-space:nowrap}.rt-tot td{border-top:2px solid var(--line)}
+.rt-t td,.rt-t th,.ev-t td,.ev-t th{white-space:nowrap}.rt-tot td{border-top:2px solid var(--line)}
 .day.busy.pasada{background:var(--surface-2);color:var(--ink-3);text-decoration:line-through}
 .day.sel{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:.82rem;color:var(--ink-2)}
@@ -2609,13 +2609,72 @@ function admRentas(){
     '<div class="kpi"><span>Costo proveedores</span><strong>'+(hay?fmt(sum('costo')):'—')+'</strong><small>estimado</small></div>'+
     '<div class="kpi"><span>Ganancia</span><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong><small>sin depósitos</small></div></div>';
   var nota='<p class="hint" style="margin:8px 0 0">Sale de los recibos guardados en este celular y de las fechas reservadas del calendario (las que no tienen recibo salen con «＋ Datos» para llenarlas). Costo y ganancia son <strong>estimados</strong> con tus costos privados'+(hay?'':' (abre tu link privado en este celular para verlos)')+'; el depósito de garantía no cuenta como ganancia. Todo antes de IVA.</p>';
-  if(!L.length)return '<section class="block"><h2>Rentas</h2>'+chips+'<p class="warn">No hay rentas en este periodo.</p>'+nota+'</section>';
+  if(!L.length)return '<section class="block"><h2>Rentas</h2>'+chips+'<p class="warn">No hay rentas en este periodo.</p>'+nota+'</section>'+admEventos();
   var filas=L.map(function(r,i){var c=C[i];return '<tr><td>'+esc(rtFecha(r.fecha))+'</td><td>'+(r.sinRecibo?'<button type="button" class="btn btn-line sm" data-a="rt-datos" data-v="'+esc(r.iso)+'">＋ Datos</button>':esc(r.cliente||'—'))+'</td><td>'+esc(r.telefono||'')+'</td><td>'+esc(reciboPaquete(r)||'')+'</td><td class="n">'+esc(String(r.invitados||''))+'</td><td class="n">'+fmt(c.total)+'</td><td class="n">'+fmt(c.abono)+'</td><td class="n">'+fmt(c.saldo)+'</td><td class="n">'+(c.costo==null?'—':fmt(c.costo))+'</td><td class="n">'+(c.ganancia==null?'—':fmt(c.ganancia))+(c.sinCosto.length?' <span title="Falta el costo del banquete o de los meseros">*</span>':'')+'</td><td>'+esc(c.estado)+'</td></tr>';}).join('');
   var tabla='<div style="overflow-x:auto"><table class="stat-t rt-t"><thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Paquete</th><th class="n">Inv.</th><th class="n">Total</th><th class="n">Abonado</th><th class="n">Saldo</th><th class="n">Costo</th><th class="n">Ganancia</th><th>Estado</th></tr></thead><tbody>'+filas+
     '<tr class="rt-tot"><td colspan="5"><strong>Total</strong></td><td class="n"><strong>'+fmt(sum('total'))+'</strong></td><td class="n"><strong>'+fmt(sum('abono'))+'</strong></td><td class="n"><strong>'+fmt(sum('saldo'))+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('costo')):'—')+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong></td><td></td></tr></tbody></table></div>';
   var aster=C.some(function(c){return c.sinCosto.length;})?'<p class="hint" style="margin:6px 0 0">* Tiene banquete o meseros y no encontré su costo (falta en tus costos privados o el recibo no dice qué comida lleva): esa ganancia sale más alta de lo real.</p>':'';
   return '<section class="block"><h2>Rentas</h2>'+chips+kpis+tabla+aster+
-    '<div class="adm-btns" style="margin-top:12px"><button type="button" class="btn btn-main sm" data-a="rt-excel">⬇ Descargar para Excel</button></div>'+nota+'</section>';
+    '<div class="adm-btns" style="margin-top:12px"><button type="button" class="btn btn-main sm" data-a="rt-excel">⬇ Descargar para Excel</button></div>'+nota+'</section>'+admEventos();
+}
+/* Admin › Rentas › «Eventos realizados» y «Movimientos de Kalli»: datos solo de este celular (kalli-privado-v1); entran al respaldo cifrado y al link privado. */
+var EV_MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function evNum(x){var s=String(x==null?'':x).replace(/[$,\s]/g,'');return s===''?NaN:+s;}
+function evLeer(){var p=privLeer();return p&&Array.isArray(p.eventos)?p.eventos:[];}
+function movLeer(){var p=privLeer();return p&&Array.isArray(p.movimientos)?p.movimientos:[];}
+function evFecha(f){var p=String(f||'').split('-');return p.length===3&&EV_MES[(+p[1])-1]?(+p[2])+' '+EV_MES[(+p[1])-1]+' '+p[0]:String(f||'');}
+function evMes(m){var p=String(m||'').split('-');return p.length===2&&EV_MES[(+p[1])-1]?EV_MES[(+p[1])-1]+' '+p[0]:String(m||'');}
+/* texto que se pega, una fila por línea (# = comentario). EVENTO: fecha, cliente, personas, paquete, precio, pagado y costos (concepto/proveedor/monto; separados por ;). MOV: mes, concepto, monto y tipo (gasto, ingreso o por pagar). */
+function evParsear(txt){
+  var ev=[],mv=[],err=[];
+  String(txt||'').split(/\r?\n/).forEach(function(l,i){
+    var s=l.trim();if(!s||s.charAt(0)==='#')return;
+    var c=s.split('|').map(function(x){return x.trim();}),tipo=String(c[0]||'').toUpperCase();
+    if(tipo==='EVENTO'){
+      var bad=false,costos=String(c[7]||'').split(';').map(function(x){return x.trim();}).filter(Boolean).map(function(x){
+        var q=x.split('/').map(function(y){return y.trim();}),mo=q.length>1?q[q.length-1]:'',n=mo===''?null:evNum(mo);
+        if(n!==null&&!isFinite(n))bad=true;
+        return {concepto:q[0],proveedor:q.length>2?q[1]:'',monto:n};});
+      if(bad||!/^\d{4}-\d{2}-\d{2}$/.test(c[1]||'')||!c[2]||!isFinite(evNum(c[3]))||!isFinite(evNum(c[5]))||!isFinite(evNum(c[6]))){err.push(i+1);return;}
+      ev.push({fecha:c[1],cliente:c[2],personas:evNum(c[3]),paquete:c[4]||'',precio:evNum(c[5]),pagado:evNum(c[6]),costos:costos});
+    }else if(tipo==='MOV'){
+      var mn=evNum(c[3]);
+      if(!c[1]||!c[2]||!isFinite(mn)||!/^(gasto|ingreso|por pagar)$/i.test(c[4]||'')){err.push(i+1);return;}
+      mv.push({mes:c[1],concepto:c[2],monto:mn,tipo:c[4].toLowerCase()});
+    }else err.push(i+1);
+  });
+  return {eventos:ev,movimientos:mv,errores:err};
+}
+function admEventos(){
+  var E=evLeer(),M=movLeer(),sum=function(a,f){return a.reduce(function(s,x){return s+(+f(x)||0);},0);};
+  var ord=E.slice().sort(function(a,b){return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0;});
+  var precio=sum(E,function(x){return x.precio;}),cobro=sum(E,function(x){return x.pagado;}),
+      debo=sum(E,function(x){return sum(x.costos||[],function(c){return c.monto;});}),
+      sinMonto=E.some(function(x){return (x.costos||[]).some(function(c){return c.monto==null;});});
+  var filas=ord.map(function(x){var deb=sum(x.costos||[],function(c){return c.monto;}),sin=(x.costos||[]).some(function(c){return c.monto==null;});
+    return '<tr><td>'+esc(evFecha(x.fecha))+'</td><td>'+esc(x.cliente)+'</td><td class="n">'+esc(String(x.personas||''))+'</td><td>'+esc(x.paquete)+'</td><td class="n">'+fmt(x.precio)+'</td><td class="n">'+fmt(x.pagado)+'</td><td class="n">'+fmt(x.precio-x.pagado)+'</td><td class="n">'+fmt(deb)+(sin?' *':'')+'</td></tr>';}).join('');
+  var det=ord.map(function(x){var deb=sum(x.costos||[],function(c){return c.monto;});
+    var items=(x.costos||[]).map(function(c){return '<li>'+esc(c.concepto)+(c.proveedor?' · '+esc(c.proveedor):'')+': '+(c.monto==null?'sin monto':fmt(c.monto))+'</li>';}).join('');
+    return '<details><summary>'+esc(x.cliente)+' · '+esc(evFecha(x.fecha))+'</summary><ul class="incl">'+items+'</ul><p class="hint">Debo a proveedores: '+fmt(deb)+'</p></details>';}).join('');
+  var kEv='<div class="kpis" style="margin-top:12px">'+
+    '<div class="kpi"><span>Eventos</span><strong>'+E.length+'</strong><small>'+(E.length?esc(evFecha(ord[0].fecha))+' a '+esc(evFecha(ord[ord.length-1].fecha)):'sin datos')+'</small></div>'+
+    '<div class="kpi"><span>Cobrado</span><strong>'+fmt(cobro)+'</strong><small>'+fmt(precio-cobro)+' por cobrar</small></div>'+
+    '<div class="kpi"><span>Debo a proveedores</span><strong>'+fmt(debo)+'</strong><small>'+(sinMonto?'sin los costos sin monto':'todo con monto')+'</small></div></div>';
+  var tEv=E.length?'<div style="overflow-x:auto;margin-top:12px"><table class="stat-t ev-t"><thead><tr><th>Fecha</th><th>Cliente</th><th class="n">Pers.</th><th>Paquete</th><th class="n">Precio</th><th class="n">Pagado</th><th class="n">Debe</th><th class="n">Debo a prov.</th></tr></thead><tbody>'+filas+
+    '<tr class="rt-tot"><td colspan="4"><strong>Total</strong></td><td class="n"><strong>'+fmt(precio)+'</strong></td><td class="n"><strong>'+fmt(cobro)+'</strong></td><td class="n"><strong>'+fmt(precio-cobro)+'</strong></td><td class="n"><strong>'+fmt(debo)+'</strong></td></tr></tbody></table></div>':'<p class="warn">Sin eventos guardados en este celular.</p>';
+  var pegar='<details style="margin-top:12px"'+(E.length||M.length?'':' open')+'><summary>Cargar o cambiar datos</summary>'+
+    '<p class="hint">Pega una fila por línea. Reemplaza solo el tipo que pegues (EVENTO o MOV). Formato:<br>EVENTO | 2026-06-20 | Cliente | personas | paquete | precio | pagado | concepto/proveedor/monto; concepto/monto<br>MOV | 2024-01 | concepto | monto | gasto</p>'+
+    '<textarea id="ev-in" class="copy-fb" placeholder="EVENTO | 2026-06-20 | ..."></textarea>'+
+    '<div class="adm-btns" style="margin-top:8px"><button type="button" class="btn btn-main sm" data-a="ev-pegar">Guardar datos</button></div></details>';
+  var g=M.filter(function(x){return x.tipo==='gasto';}),ing=M.filter(function(x){return x.tipo==='ingreso';}),pp=M.filter(function(x){return x.tipo==='por pagar';});
+  var kMov='<div class="kpis" style="margin-top:12px"><div class="kpi"><span>Gastos</span><strong>'+fmt(sum(g,function(x){return x.monto;}))+'</strong><small>'+g.length+' movimientos</small></div>'+
+    '<div class="kpi"><span>Ingresos</span><strong>'+fmt(sum(ing,function(x){return x.monto;}))+'</strong><small>'+ing.length+' movimientos</small></div>'+
+    '<div class="kpi"><span>Por pagar</span><strong>'+fmt(sum(pp,function(x){return x.monto;}))+'</strong><small>'+pp.length+' pendiente(s)</small></div></div>';
+  var mrows=M.map(function(x){return '<tr><td>'+esc(evMes(x.mes))+'</td><td>'+esc(x.concepto)+'</td><td class="n">'+fmt(x.monto)+'</td><td>'+esc(x.tipo)+'</td></tr>';}).join('');
+  var tMov=M.length?'<div style="overflow-x:auto;margin-top:12px"><table class="stat-t ev-t"><thead><tr><th>Mes</th><th>Concepto</th><th class="n">Monto</th><th>Tipo</th></tr></thead><tbody>'+mrows+'</tbody></table></div>':'<p class="warn">Sin movimientos guardados en este celular.</p>';
+  return '<section class="block" style="margin-top:24px"><h2>Eventos realizados</h2><p class="hint">Eventos antes de la app. Solo en este celular y en tu respaldo cifrado.</p>'+kEv+tEv+
+    (sinMonto?'<p class="hint" style="margin-top:6px">* Hay costos sin monto en el texto: no suman.</p>':'')+'<div style="margin-top:12px">'+det+'</div>'+pegar+'</section>'+
+    '<section class="block" style="margin-top:24px"><h2>Movimientos de Kalli</h2><p class="hint">Del Cierre de Mes de rentas. Solo en este celular y en tu respaldo cifrado.</p>'+kMov+tMov+'</section>';
 }
 function rtFecha(s){s=fechaISODeTexto(s)||s;var d=parse(s);return isNaN(d)?String(s||''):d.getDate()+' '+MESES[d.getMonth()].slice(0,3).toLowerCase()+' '+d.getFullYear();}
 async function rentasExcel(){
@@ -3719,7 +3778,7 @@ function crearClaveNueva(){
   if(A.privBloq){A.draft.apartados=clone(D.apartados||[]);A.draft.historial=[];A.draft.pagos={};A.privBloq=false;}
   A.respUI={t:'link'};A.status='Listo: clave nueva creada. Copia tu link privado, guárdalo y luego toca «Respaldar».';renderAdmin(true);refreshFoot();
 }
-function linkPrivado(){var k=claveResp();if(!k)return '';var o={k:k},p=privLeer();if(p&&p.reglas){o.reglas=p.reglas;o.costos=p.costos||{};}
+function linkPrivado(){var k=claveResp();if(!k)return '';var o={k:k},p=privLeer();if(p&&p.reglas){o.reglas=p.reglas;o.costos=p.costos||{};}if(p&&Array.isArray(p.eventos))o.eventos=p.eventos;if(p&&Array.isArray(p.movimientos))o.movimientos=p.movimientos;
   return adminUrl()+'#privado:'+btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function respPanel(){
   var u=A.respUI;if(!u)return '';
@@ -3836,6 +3895,12 @@ function accionAdmin(a,t){
     case 'st-per':A.stPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-per':A.rtPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-excel':rentasExcel();break;
+    case 'ev-pegar':{var evTa=document.getElementById('ev-in'),evPr=evParsear(evTa?evTa.value:''),evPv=privLeer()||{reglas:{},costos:{}};
+      if(!evPr.eventos.length&&!evPr.movimientos.length){A.status='No encontré filas válidas. Revisa el formato (EVENTO o MOV, separadas por |).';refreshFoot();renderAdmin(true);break;}
+      if(evPr.eventos.length)evPv.eventos=evPr.eventos;if(evPr.movimientos.length)evPv.movimientos=evPr.movimientos;
+      if(!privGuardar(evPv)){A.status='No se pudo guardar en este celular.';refreshFoot();renderAdmin(true);break;}
+      var evMsg=[];if(evPr.eventos.length)evMsg.push(evPr.eventos.length+' eventos');if(evPr.movimientos.length)evMsg.push(evPr.movimientos.length+' movimientos');
+      A.status='Listo: '+evMsg.join(' y ')+' guardados en este celular.'+(evPr.errores.length?' Filas con error (no se guardaron): '+evPr.errores.join(', ')+'.':'');refreshFoot();renderAdmin(true);break;}
     case 'rt-datos':{var nr=nuevoRecibo();nr.fecha=fechaLarga(t.dataset.v);nr.estado='confirmado';REC.unshift(nr);guardarRecibos();A.tab='recibos';A.recEdit=0;A.recMas=null;A.status='Llena los datos de ese evento: cliente, conceptos y lo pagado. Ya sale en Rentas.';renderAdmin(true);try{adm.querySelector('.adm-body').scrollTop=0;}catch(e){}break;}
     case 'apartado-liberar':marcarHistorial(d,(d.apartados[+t.dataset.i]||{}).folio||(d.apartados[+t.dataset.i]||{}).nota,'liberado');d.apartados.splice(+t.dataset.i,1);marcarCambio();renderAdmin(true);autoPublicar();break;
     case 'ac-sel':A.acSel=+t.dataset.i;renderAdmin();break;
@@ -3990,7 +4055,7 @@ async function iniciarAdmin(){
     EDITOR=edit;
     var hp=/^#privado:([A-Za-z0-9_-]+)$/.exec(location.hash),privOk=false;
     if(hp){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
-      if(edit){try{var js=atob(hp[1].replace(/-/g,'+').replace(/_/g,'/'));var po=JSON.parse(decodeURIComponent(escape(js)));if(po&&po.reglas)privOk=privGuardar({reglas:po.reglas,costos:po.costos||{}});if(edit&&po&&typeof po.k==='string'&&po.k.length>=16){try{localStorage.setItem(KEY_K,po.k);}catch(e){}}}catch(e){}}}
+      if(edit){try{var js=atob(hp[1].replace(/-/g,'+').replace(/_/g,'/'));var po=JSON.parse(decodeURIComponent(escape(js)));if(po&&po.reglas){var evNuevo={reglas:po.reglas,costos:po.costos||{}},evEv=Array.isArray(po.eventos)?po.eventos:(privLeer()||{}).eventos,evMv=Array.isArray(po.movimientos)?po.movimientos:(privLeer()||{}).movimientos;if(Array.isArray(evEv))evNuevo.eventos=evEv;if(Array.isArray(evMv))evNuevo.movimientos=evMv;privOk=privGuardar(evNuevo);}if(edit&&po&&typeof po.k==='string'&&po.k.length>=16){try{localStorage.setItem(KEY_K,po.k);}catch(e){}}}catch(e){}}}
     var hm=/^#(?:admin|ref)(?::([^:]*):([^:]*):([^:]*)(?::([^:]*))?(?::([^:]*))?(?::([^:]*))?)?$/.exec(location.hash);
     if(hm){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
     var hk=/^#[qk]=([A-Za-z0-9_.~-]+)$/.exec(location.hash);
