@@ -1,0 +1,22 @@
+{
+ "name": "Kalli Terraza (dueño)",
+ "short_name": "Kalli dueño",
+ "start_url": "./",
+ "display": "browser",
+ "background_color": "#ffffff",
+ "theme_color": "#173026",
+ "icons": [
+  {
+   "src": "iconos/kalli-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any maskable"
+  },
+  {
+   "src": "iconos/kalli-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}

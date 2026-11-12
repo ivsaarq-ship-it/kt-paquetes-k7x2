@@ -3,7 +3,7 @@
 <head>
 <meta name="robots" content="noindex,nofollow"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kalli Terraza</title>
+<title>Kalli Terraza</title><link rel="icon" type="image/png" sizes="48x48" href="iconos/kalli-48.png"><link rel="apple-touch-icon" href="iconos/kalli-180.png"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#173026"><meta name="apple-mobile-web-app-title" content="Kalli dueño">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Gloock&display=swap">
 <style id="kalli-css">
@@ -180,6 +180,7 @@ details.cat>.items{margin-top:12px}
 
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.inv-pres{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}.inv-pres .chip{padding-left:4px;padding-right:4px}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 15px;min-height:42px;font:inherit;font-size:.93rem;cursor:pointer;font-variant-numeric:tabular-nums}
 .chip:hover{border-color:var(--ink-3)}
 .chip.on{background:var(--gold-soft);border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);font-weight:600}
@@ -1282,11 +1283,11 @@ function v0(){
 function invHint(){var mu=mesasUsadas(S.invitados),sem=!S.fecha||diaTipo(S.fecha)==='semana';return mu+' mesa'+(mu===1?'':'s')+(mu*10<S.invitados?' (algunas de 11)':' de 10')+' · mínimo '+minInvitadosDia(S.fecha)+' invitados '+(sem?'de lunes a jueves':'de viernes a domingo')+' · máximo '+capacidad();}
 function v1(){
   var c=capacidad(),step=Math.max(10,Math.round(c/5/10)*10),mn=minInvitadosDia(S.fecha),pres=[mn];
-  for(var i=2;i<=5;i++){var v=Math.min(c,i*step);if(v>mn&&pres.indexOf(v)<0)pres.push(v);}
+  for(var i=1;i<=5;i++){var v=Math.min(c,i*step);if(v>mn&&pres.indexOf(v)<0)pres.push(v);}
   return '<section class="block"><details class="evt"><summary><span class="t">¿Qué vas a celebrar? <em>(opcional)</em></span><span class="v">'+esc(S.tipo||'Elegir')+'</span></summary><div class="chips">'+D.tiposEvento.map(function(t){return '<button type="button" class="chip'+(S.tipo===t?' on':'')+'" data-tipo="'+esc(t)+'" aria-pressed="'+(S.tipo===t)+'">'+esc(t)+'</button>';}).join('')+'</div></details></section>'+
   '<section class="block"><h2>¿Cuántos invitados?</h2>'+
     '<div class="inv-row"><div class="qty qty-lg"><button type="button" data-inv="-10" aria-label="Quitar 10 invitados"'+(S.invitados<=mn?' disabled':'')+'>−</button><input id="inv" type="number" inputmode="numeric" min="'+minInvitadosDia(S.fecha)+'" max="'+c+'" value="'+S.invitados+'" aria-label="Número de invitados"><button type="button" data-inv="10" aria-label="Agregar 10 invitados"'+(S.invitados>=c?' disabled':'')+'>+</button></div><p class="hint" id="inv-hint">'+invHint()+'</p></div>'+
-    '<div class="chips">'+pres.map(function(v){return '<button type="button" class="chip'+(S.invitados===v?' on':'')+'" data-invset="'+v+'">'+v+'</button>';}).join('')+'</div>'+
+    '<div class="chips inv-pres">'+pres.map(function(v){return '<button type="button" class="chip'+(S.invitados===v?' on':'')+'" data-invset="'+v+'">'+v+'</button>';}).join('')+'</div>'+
   '</section>'+
   (D.negocio.mostrarPlano!==false?'<section class="block"><h2>Acomodo sugerido</h2><div id="plano" class="plano">'+planoHTML()+'</div></section>':'')+
   '<section class="block"><h2>¿A qué hora empieza?</h2><div class="chips">'+D.horarios.map(function(h){return '<button type="button" class="chip'+(S.horario===h?' on':'')+'" data-hora="'+esc(h)+'" aria-pressed="'+(S.horario===h)+'">'+esc(h)+'</button>';}).join('')+'</div><p class="hint">'+htmlMarcas(marcaRegalo(horarioTexto()))+'</p></section>';
