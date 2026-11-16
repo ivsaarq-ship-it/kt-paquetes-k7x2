@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Gloock&display=swap">
 <style id="kalli-css">
+.ct-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.ct-chk{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit;text-decoration:none;cursor:pointer}span.ct-chk{cursor:default;border-style:dashed}
 .interes-aviso{background:var(--surface);border:1px dashed var(--gold-line);border-radius:var(--r-sm);padding:10px 12px;margin:10px 0 0}.interes-t{margin:8px 0}
 :root{
   --bg:#F1F4EE;--surface:#FFFFFF;--surface-2:#E7ECE5;
@@ -856,10 +857,12 @@ function nuevoEstado(){
 function cargar(){try{var r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
 function guardar(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 /* Sitio propio (sin Claude): en el celular marcado como dueño (#soy-dueno, una vez), los links de cotización (#q=/#k=) se abren en la app de Claude, donde Admin arma el recibo. */
+/* Sergio, 16 nov: abierto solo, Android lo mandaba a la app de Claude, donde «Subir INE» ya no abre las fotos; con un toque se queda en Chrome (ahí sí). */
+function duenoIr(u){try{var o=document.getElementById('dueno-ir');if(o)o.remove();o=document.createElement('div');o.id='dueno-ir';o.setAttribute('style','position:fixed;inset:0;z-index:2147483000;background:#173026;display:grid;place-content:center;gap:16px;padding:24px 16px;text-align:center;font-family:system-ui,sans-serif');o.innerHTML='<p style="margin:0;color:#EEF3EC;font-size:1.15rem;font-weight:600">Cotización de un cliente</p><a id="dueno-ir-a" href="'+u.replace(/"/g,'%22')+'" style="display:block;min-height:56px;padding:16px 22px;border-radius:14px;background:#E09A2E;color:#2A1904;font-weight:700;font-size:1.15rem;text-decoration:none">Abrir en Admin</a><button type="button" id="dueno-ir-x" style="background:none;border:0;color:#A7BDB0;font-size:.95rem;text-decoration:underline;padding:8px">Ver como cliente</button>';document.body.appendChild(o);document.getElementById('dueno-ir-x').onclick=function(){o.remove();};}catch(e){location.href=u;}}
 function duenoSitio(){try{var h=location.hash||'',K='kalli-dueno-sitio',adm=String((D.negocio&&D.negocio.urlAdmin)||''),pub='';try{pub=new URL(String((D.negocio&&D.negocio.urlApp)||'')).origin;}catch(e0){}
   if(location.origin!==pub)return;
   if(h==='#soy-dueno'||h==='#no-dueno'){if(h==='#soy-dueno')localStorage.setItem(K,'1');else localStorage.removeItem(K);history.replaceState(null,'',location.pathname+location.search);var msg=h==='#soy-dueno'?'Listo: en este celular, los links de cotización abrirán tu Admin.':'Este celular ya no abre Admin con los links.';setTimeout(function(){try{toast(msg);}catch(e1){}},700);return;}
-  if(localStorage.getItem(K)==='1'&&(/^#[qk]=[A-Za-z0-9_.~-]+$/.test(h)||/^#(ref|admin)(:|$)/.test(h))&&/^https:\/\//.test(adm))location.replace(adm.split('#')[0]+h);
+  if(localStorage.getItem(K)==='1'&&(/^#[qk]=[A-Za-z0-9_.~-]+$/.test(h)||/^#(ref|admin)(:|$)/.test(h))&&/^https:\/\//.test(adm))duenoIr(adm.split('#')[0]+h);
 }catch(e){}} duenoSitio(); /* si la pestaña ya estaba en el sitio, el link solo cambia el # (no recarga): revisar otra vez */ window.addEventListener('hashchange',duenoSitio);
 if(location.hash==='#nuevo'){try{localStorage.removeItem(KEY);}catch(e){}try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
 var S=Object.assign(nuevoEstado(),cargar()||{});
@@ -3128,7 +3131,12 @@ function contratoEstadoHtml(r,i){
   var imsg=(A.ineMsg&&A.ineMsg[r.id])||'';
   if(((A.ineLast&&A.ineLast[r.id])||ineUlt(r.id))&&!(r.ineNombre&&r.ineClave&&r.ineDomicilio))subir+='<button type="button" class="btn btn-line sm" data-a="ine-reintentar" data-i="'+i+'" title="Reintentar con las mismas fotos" aria-label="Reintentar con las mismas fotos" style="min-width:44px;padding:0 12px;font-size:1.15rem;line-height:1">↻</button>';
   if(ab&&!r.ineNombre&&!A.permAsked){A.permAsked=1;setTimeout(function(){try{if(window.claude&&typeof window.claude.use==='function')window.claude.use('permissions').then(function(pm){if(pm&&pm.request)pm.request(['sample']).catch(function(){});}).catch(function(){});}catch(e){}},400);}
-  var h='<div class="rc-ct" style="display:grid;gap:8px;margin:4px 0"><p class="hint" style="margin:0">Contrato: '+m(ab)+' anticipo · '+m(ine)+' INE · '+m(r.ineOk)+' autorizado</p>';
+  /* Sergio, 16 nov: las casillas se pueden tocar (anticipo = «Recibí el anticipo», INE = subir, autorizado = autorizar y enviar) */
+  var CK='class="ct-chk"',faltaAut=!ab?'Primero registra el anticipo (toca ⬜ anticipo).':!ine?'Primero sube la INE (toca ⬜ INE).':!vig?'La INE está vencida: no sirve para el contrato.':'';
+  var cA=ab?'<span '+CK+' aria-disabled="true">✅ anticipo</span>':'<button type="button" '+CK+' data-a="recibo-anticipo" data-i="'+i+'">⬜ anticipo</button>';
+  var cI=ine?'<span '+CK+' aria-disabled="true">✅ INE</span>':'<label for="ine-global" role="button" tabindex="0" '+CK+' data-a="ine-subir" data-i="'+i+'">⬜ INE</label>';
+  var cO=r.ineOk?'<span '+CK+' aria-disabled="true">✅ autorizado</span>':(faltaAut?'<button type="button" '+CK+' data-a="ct-falta" data-msg="'+esc(faltaAut)+'">⬜ autorizado</button>':'<a '+CK+' data-a="recibo-autorizar" data-i="'+i+'" href="'+esc(recEnviarUrl(Object.assign({},r,{ineOk:true})))+'" target="_blank" rel="noopener">⬜ autorizado</a>');
+  var h='<div class="rc-ct" style="display:grid;gap:8px;margin:4px 0"><p class="hint ct-row" style="margin:0">Contrato: '+cA+cI+cO+'</p>';
   if(r.ineNombre&&!r.ineOk){
     var R=reciboResumen(r);
     function fila(k,v,mal){return '<div style="display:flex;justify-content:space-between;gap:10px"><span class="hint" style="margin:0">'+k+'</span><b style="text-align:right'+(mal?';color:var(--busy)':'')+'">'+(v?esc(v):'<span style="color:var(--busy)">falta</span>')+'</b></div>';}
@@ -3681,7 +3689,8 @@ function recPuente(){
       '<p style="margin:0 0 4px"><b>'+esc(qp.text||'Evento')+'</b></p>'+(fe?'<p class="hint" style="margin:0 0 14px">'+esc(cap(fechaLarga(fe[1]+'-'+fe[2]+'-'+fe[3])))+' · '+fe[4]+':'+fe[5]+' h</p>':'')+
       '<div style="display:grid;gap:10px"><a class="btn btn-main" href="'+esc(/Android/i.test(navigator.userAgent||'')?'intent://'+gu.replace(/^https:\/\//,'')+'#Intent;scheme=https;package=com.google.android.calendar;S.browser_fallback_url='+encodeURIComponent(gu)+';end':gu)+'">📅 Abrir en Google Calendar</a><a class="btn btn-line" href="'+esc(web)+'">Abrir en la página de Google Calendar</a></div>'+
       '<p class="hint">Revisa que la fecha y los datos estén llenos y toca «Guardar». Para regresar a Kalli, cierra esta pestaña.</p></section></main>';
-    /* sin abrir solo: desde la app de Claude (pestaña de Chrome) abría la web; con el toque abre la app de Calendar */
+    /* abre la app de Calendar sola (Android, una vez por evento); si el celular no lo deja, queda el botón */
+    if(/Android/i.test(navigator.userAgent||'')){try{var kk='kalli-gcal-app';if(sessionStorage.getItem(kk)!==m[2]){sessionStorage.setItem(kk,m[2]);var ia=document.querySelector('#app a.btn-main');if(ia)setTimeout(function(){location.href=ia.href;},250);}}catch(e){}}
     return true;}
   try{if(window.top!==window.self)return false;}catch(e){return false;}
   if(m[1]==='ine'){ineVista(decodeURIComponent(m[2]));return true;}
@@ -3997,6 +4006,7 @@ function accionAdmin(a,t){
     case 'recibo-autorizar':{i=+t.dataset.i;if(!REC[i])break;REC[i].ineOk=true;guardarRecibos();A.status='Contrato autorizado. Se abrió la página para enviarle recibo y contrato.';setTimeout(function(){renderAdmin(true);},60);break;}
     case 'recibo-desautorizar':{i=+t.dataset.i;if(!REC[i])break;REC[i].ineOk=false;guardarRecibos();A.status='Autorización quitada.';renderAdmin(true);break;}
     case 'recibo-parse':{i=+t.dataset.i;var ta=document.getElementById('rc-paste-'+i);var ineP=parseIne(ta?ta.value:''),rc=REC[i];if(rc&&ineP&&rc.folio&&ineP.folio&&ineP.folio!=='—'&&ineP.folio!==rc.folio){A.status='Ese INE es del folio '+ineP.folio+', no de este recibo ('+rc.folio+'). Pégalo en el recibo correcto.';refreshFoot();break;}if(rc&&ineP){delete pasteBuf['rc-paste-'+i];['ineNombre','ineDomicilio','ineClave','ineVigencia'].forEach(function(k){if(ineP[k])rc[k]=ineP[k];});if(ineP.telefono&&!rc.telefono)rc.telefono=ineP.telefono;guardarRecibos();if(A.recEdit===i)A.recEdit=null;rc.ineOk=false;A.status='Listo: datos del INE cargados. Revísalos y toca «Autorizar y enviar».';renderAdmin(true);break;}var pr=prDeTexto(ta?ta.value:'');delete pasteBuf['rc-paste-'+i];if(rc){llenarReciboCot(rc,pr);guardarRecibos();if(pr.lineas.length&&A.recEdit===i)A.recEdit=null;A.status=pr.lineas.length?'Listo: recibo lleno con la cotización.':'No encontré la cotización en ese texto. Pega el mensaje completo.';renderAdmin(true);}break;}
+    case 'ct-falta':{A.status=t.dataset.msg||'';refreshFoot();try{toast(A.status);}catch(e){}break;}
     case 'recibo-editar':{i=+t.dataset.i;A.recEdit=A.recEdit===i?null:i;if(A.recEdit!==null)A.recMas=null;renderAdmin(true);break;}
     case 'ine-subir':{var ei=ineInputGlobal();ei.dataset.i=t.dataset.i;/* el <label for> abre el selector solo (más seguro en la app de Claude) */if(t.tagName!=='LABEL')ei.click();break;}
     case 'ine-reintentar':{i=+t.dataset.i;var rcx=REC[i];if(rcx){if(A.ineLast&&A.ineLast[rcx.id])leerIne(i,A.ineLast[rcx.id]);else{var du0=ineUlt(rcx.id);if(du0)ineFilesDe(du0).then(function(f0){leerIne(i,f0);});}}break;}
