@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Gloock&display=swap">
 <style id="kalli-css">
+.interes-aviso{background:var(--surface);border:1px dashed var(--gold-line);border-radius:var(--r-sm);padding:10px 12px;margin:10px 0 0}.interes-t{margin:8px 0}
 :root{
   --bg:#F1F4EE;--surface:#FFFFFF;--surface-2:#E7ECE5;
   --ink:#17221C;--ink-2:#46564D;--ink-3:#5E6F65;--line:#D3DCD2;
@@ -653,9 +654,9 @@ function parseCotizacion(txt){
   r.anticipo=parseMonto(campo(/\*(?:Anticipo[^:]*|Pago total[^:]*):\*\s*\$?([\d,.\-−]+)/));
   r.cliente=campo(/\n\*Nombre:\*\s*(.+)/);
   r.telefono=campo(/\*WhatsApp:\*\s*(.+)/);
-  r.notas=campo(/\*Comentarios:\*\s*(.+)/)||campo(/\*Detalles:\*\s*(.+)/);
+  r.notas=campo(/\*Comentarios:\*\s*(.+)/)||campo(/\*Detalles:\*\s*(.+)/);var rIn=campo(/\*Me interesa[^*]*:\*\s*(.+)/);if(rIn)r.notas=(r.notas?r.notas+' · ':'')+'Me interesa (confirmar precio y disponibilidad): '+rIn;
   r.acomodo=campo(/\*Acomodo:\*\s*(.+)/)||campo(/\*Mesas:\*\s*(.+)/);
-  var conocidos=/^(Folio|Fecha|Horario|Evento|Paquete|Acomodo|Mesas|Total estimado|Subtotal|Total|Total con IVA|Anticipo[^:]*|Pago total|Nombre|WhatsApp|Comentarios|Detalles|Nos conoció por)$/i,mm,red=/^\*([^*]+):\*\s*(.+)$/gm;r.detalles=[];
+  var conocidos=/^(Folio|Fecha|Horario|Evento|Paquete|Acomodo|Mesas|Total estimado|Subtotal|Total|Total con IVA|Anticipo[^:]*|Pago total|Nombre|WhatsApp|Comentarios|Detalles|Nos conoció por|Me interesa.*)$/i,mm,red=/^\*([^*]+):\*\s*(.+)$/gm;r.detalles=[];
   while((mm=red.exec(txt))){if(!conocidos.test(mm[1].trim()))r.detalles.push(mm[1].trim()+': '+mm[2].trim());}
   return r;
 }
@@ -850,16 +851,16 @@ function fabWa(){
 }
 function nuevoEstado(){
   var h=D.horarios.indexOf('19:00')>=0?'19:00':(D.horarios[0]||'19:00');
-  return {step:0,fecha:null,mes:iso(new Date(hoy.getFullYear(),hoy.getMonth(),1)),tipo:null,invitados:Math.min(100,capacidad()),horario:h,paquete:null,acomodo:null,origen:null,terms:false,items:{},elem:{},opc:{},mix:{},nombre:'',telefono:'',notas:'',factura:false,folio:null,confirmReset:false};
+  return {step:0,fecha:null,mes:iso(new Date(hoy.getFullYear(),hoy.getMonth(),1)),tipo:null,invitados:Math.min(100,capacidad()),horario:h,paquete:null,acomodo:null,origen:null,terms:false,items:{},elem:{},opc:{},mix:{},nombre:'',telefono:'',notas:'',factura:false,folio:null,confirmReset:false,interes:{}};
 }
 function cargar(){try{var r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
 function guardar(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 /* Sitio propio (sin Claude): en el celular marcado como dueño (#soy-dueno, una vez), los links de cotización (#q=/#k=) se abren en la app de Claude, donde Admin arma el recibo. */
-(function(){try{var h=location.hash||'',K='kalli-dueno-sitio',adm=String((D.negocio&&D.negocio.urlAdmin)||''),pub='';try{pub=new URL(String((D.negocio&&D.negocio.urlApp)||'')).origin;}catch(e0){}
+function duenoSitio(){try{var h=location.hash||'',K='kalli-dueno-sitio',adm=String((D.negocio&&D.negocio.urlAdmin)||''),pub='';try{pub=new URL(String((D.negocio&&D.negocio.urlApp)||'')).origin;}catch(e0){}
   if(location.origin!==pub)return;
   if(h==='#soy-dueno'||h==='#no-dueno'){if(h==='#soy-dueno')localStorage.setItem(K,'1');else localStorage.removeItem(K);history.replaceState(null,'',location.pathname+location.search);var msg=h==='#soy-dueno'?'Listo: en este celular, los links de cotización abrirán tu Admin.':'Este celular ya no abre Admin con los links.';setTimeout(function(){try{toast(msg);}catch(e1){}},700);return;}
   if(localStorage.getItem(K)==='1'&&(/^#[qk]=[A-Za-z0-9_.~-]+$/.test(h)||/^#(ref|admin)(:|$)/.test(h))&&/^https:\/\//.test(adm))location.replace(adm.split('#')[0]+h);
-}catch(e){}})();
+}catch(e){}} duenoSitio(); /* si la pestaña ya estaba en el sitio, el link solo cambia el # (no recarga): revisar otra vez */ window.addEventListener('hashchange',duenoSitio);
 if(location.hash==='#nuevo'){try{localStorage.removeItem(KEY);}catch(e){}try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
 var S=Object.assign(nuevoEstado(),cargar()||{});
 (function(){var e=nuevoEstado();
@@ -873,12 +874,15 @@ var S=Object.assign(nuevoEstado(),cargar()||{});
   if(S.fecha&&!/^\d{4}-\d{2}-\d{2}$/.test(S.fecha))S.fecha=null;
   S.mes=e.mes;
   if(!S.opc||typeof S.opc!=='object')S.opc={};
+  if(!S.interes||typeof S.interes!=='object'||Array.isArray(S.interes))S.interes={};
   if(D.horarios.indexOf(S.horario)<0)S.horario=e.horario;
   if(S.paquete){var pq=S.paquete;Object.keys(S.items).forEach(function(k){if(!visibleEnPaquete(item(k),pkg(pq)))delete S.items[k];});}
   recortarHorasExtra();
 })();
 S.confirmReset=false;
 if(S.fecha&&!disponible(S.fecha)){S.fecha=null;S.folio=null;}
+/* #pq=AAAA-MM-DD.invitados: desde Admin en Claude, la página de GitHub abre los paquetes listos para compartir las 3 imágenes */
+(function(){var m=/^#pq=(\d{4}-\d{2}-\d{2})\.(\d{1,3})$/.exec(location.hash||'');if(!m)return;try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}if(!disponible(m[1]))return;if(S.fecha!==m[1])S.folio=null;S.fecha=m[1];S.invitados=Math.max(1,Math.min(capacidad(),+m[2]));S.paquete=null;S.step=2;})();
 if(S.paquete&&!pkg(S.paquete))S.paquete=null;
 if(S.tipo&&D.tiposEvento.indexOf(S.tipo)<0)S.tipo=null;
 if(D.horarios.indexOf(S.horario)<0)S.horario=nuevoEstado().horario;
@@ -999,7 +1003,7 @@ function banqueteCalc(p,inv,comida){
   return {partes:partes,suma:suma,monto:partes.length?ceil100(suma):0,detalle:cap(partes.map(function(x){return x.txt;}).join(' · '))};
 }
 /* al agregar meseros: lo mismo que el Paquete banquete (1 por cada 20 + barman desde 80 y 150; Sergio, 13 nov: «13 meseros 2 barman») */
-function staffSugerido(inv){var st=calcStaffBanquete(inv);return st.meseros+st.barman;}
+function staffSugerido(inv){var st=calcStaffBanquete(inv);return st.meseros+st.barman;} /* Sergio, 15 nov: se puede quitar 1 del recomendado como máximo, o quitarlos todos */ function minMeseros(inv){return Math.max(1,staffSugerido(inv)-1);} function avisoMeseros(){var sg=staffSugerido(S.invitados);toast('Se recomienda 1 mesero por cada 20 personas ('+sg+' para '+S.invitados+'): es el servicio que te sugerimos para que tu evento esté bien atendido.');} function ajustarMeseros(){var q=+((S.items||{}).mesero)||0,mn=minMeseros(S.invitados);if(q>0&&q<mn){S.items.mesero=mn;return true;}return false;}
 function meseroBarmanCount(inv,p){
   if(p&&p.autoStaff){var st=calcStaffBanquete(inv);return st.meseros+st.barman;}
   return +S.items.mesero||0;
@@ -1386,7 +1390,8 @@ function ownerPaq(){
     h+='<div class="ow-row">'+lock+'<button type="button" class="btn btn-main" data-pq="share" id="pq-btn"'+(listo?'':' disabled')+'>'+(listo?PQ_TXT:'Preparando…')+'</button><button type="button" class="btn btn-line" data-pq="copy" id="pq-copy">Copiar mensaje</button></div>';
   }else{
     h+='<div class="ow-row">'+lock+'<input id="pq-tel" type="tel" inputmode="tel" autocomplete="off" placeholder="WhatsApp del cliente (opcional)" aria-label="WhatsApp del cliente (opcional)" value="'+esc(pqTel)+'"></div>'+
-      '<div class="ow-row"><button type="button" class="btn btn-main" data-pq="pdf" id="pq-btn"'+(listo?'':' disabled')+'>'+(listo?PQ_PDF:'Preparando…')+'</button><button type="button" class="btn btn-line" data-pq="copy" id="pq-copy">Copiar mensaje</button><a class="btn btn-line" id="pq-wa" href="'+esc(pqWaHref())+'" target="_blank" rel="noopener">2. WhatsApp</a></div>';
+      (canAdmin?'<div class="ow-row"><a class="btn btn-wa" id="pq-fotos" href="'+esc(recEnviarUrl({}).split('#')[0]+'#pq='+S.fecha+'.'+S.invitados)+'" target="_blank" rel="noopener">📲 Mandar las 3 fotos por WhatsApp</a></div>':'')+
+      '<div class="ow-row"><button type="button" class="btn btn-line" data-pq="pdf" id="pq-btn"'+(listo?'':' disabled')+'>'+(listo?PQ_PDF:'Preparando…')+'</button><button type="button" class="btn btn-line" data-pq="copy" id="pq-copy">Copiar mensaje</button><a class="btn btn-line" id="pq-wa" href="'+esc(pqWaHref())+'" target="_blank" rel="noopener">2. WhatsApp</a></div>';
   }
   return h+'<p class="hint" id="pq-status" role="status" aria-live="polite" style="margin:10px 0 0"></p><div id="pq-prev"></div></section>';
 }
@@ -1469,13 +1474,13 @@ async function pqGuardarPDF(R,nota){
   finally{pqBusy=false;}
 }
 function provExt(id){return (D.proveedoresExt||[]).find(function(x){return x.id===id;});}
-function waInfoUrl(n){var kw=String(D.negocio.whatsapp||'').replace(/\D/g,'');return kw?'https://wa.me/'+kw+'?text='+encodeURIComponent('Hola, '+D.negocio.nombre+'. Quiero información de '+n+' para mi evento'+(S.fecha?' del '+fechaLarga(S.fecha):'')+'.'):'';}
+/* Extras de proveedor sin precio (Sergio, 15 nov): el cliente marca «Me interesa» y todo va en un solo mensaje; Kalli confirma precio y disponibilidad. */ function interesSel(){var o=S.interes||{};return Object.keys(o).filter(function(k){var it=item(k);return o[k]&&it&&it.activo!==false;});} function interesLista(){return interesSel().map(function(k){var it=item(k);return it.nombreCorto||it.nombre;});} function interesBtn(id){var on=!!(S.interes&&S.interes[id]);return '<button type="button" class="btn tog '+(on?'btn-chosen':'btn-line')+'" data-interes="'+esc(id)+'" aria-pressed="'+on+'">'+(on?'En tu lista ✓':'Me interesa')+'</button>';} function interesAviso(){var l=interesLista();return '<p class="fine interes-aviso">Servicios de proveedores: sujetos a disponibilidad del proveedor. Marca <b>«Me interesa»</b> y van en tu mismo mensaje de WhatsApp; te confirmamos precio y disponibilidad.'+(l.length?'<br><b>Tu lista:</b> '+esc(l.join(', ')):'')+'</p>';} function waInfoUrl(n){var kw=String(D.negocio.whatsapp||'').replace(/\D/g,'');return kw?'https://wa.me/'+kw+'?text='+encodeURIComponent('Hola, '+D.negocio.nombre+'. Quiero información de '+n+' para mi evento'+(S.fecha?' del '+fechaLarga(S.fecha):'')+'.'):'';}
 function provCard(pv){
-  var wu=waInfoUrl(pv.nombre);
+  var wu='';
   var btns=wu?'<a class="btn btn-line sm" href="'+wu+'" target="_blank" rel="noopener">Pedir información con '+esc(D.negocio.nombre)+'</a>':'';
   return '<div class="prov-card">'+(pv.foto?'<img class="cover" src="'+esc(pv.foto)+'" alt="'+esc(pv.nombre)+'" loading="lazy">':'')+
     (pv.logo?'<img class="logo" src="'+esc(pv.logo)+'" alt="Logo de '+esc(pv.nombre)+'" loading="lazy">':'<span></span>')+
-    '<div><span class="lbl" style="margin:0">Proveedor recomendado</span><h3>'+esc(pv.nombre)+'</h3>'+(pv.nota?'<p>'+esc(pv.nota)+'</p>':'')+'<p>Nosotros coordinamos contigo precio, disponibilidad y fecha.</p></div>'+
+    '<div><span class="lbl" style="margin:0">Proveedor recomendado</span><h3>'+esc(pv.nombre)+'</h3>'+(pv.nota?'<p>'+esc(pv.nota)+'</p>':'')+'<p>Marca «Me interesa» en lo que quieras: te confirmamos precio y disponibilidad.</p></div>'+
     (btns?'<div class="alt-btns">'+btns+'</div>':'')+'</div>';
 }
 function itemFotos(it){
@@ -1491,14 +1496,14 @@ function itemRow(it,p,inv,plegar){
   var act,info=!!it.soloInfo&&!inc&&!cam;
   if(cam)act='<span class="inc-badge">'+(cam==='quitado'?'Quitado de tu paquete':'Cambiado por tu selección')+'</span><button type="button" class="btn btn-line sm" data-sinauto="'+esc(it.id)+'">Volver a incluirlo</button>';
   else if(inc)act='<span class="inc-badge">Incluido en tu paquete</span>'+(autoBase(it,p)&&it.quitable?'<button type="button" class="btn btn-line sm" data-sinauto="'+esc(it.id)+'">Quitar o cambiar</button>':'');
-  else if(info){var wi=it.prov?'':waInfoUrl(it.nombre);act=wi?'<a class="btn btn-line sm" href="'+wi+'" target="_blank" rel="noopener">Pedir información</a>':'';}
+  else if(info){act=interesBtn(it.id);}
   else if(it.id==='refresco-hielo'&&!refrescoOk()){act='<span class="inc-badge">Primero agrega meseros</span>';}
   else if(it.id==='mesero-horaextra'&&(!meseroBarmanCount(inv,p)||!horasExtra())){act='<span class="inc-badge">'+(!meseroBarmanCount(inv,p)?'Primero agrega meseros':'Primero agrega hora extra')+'</span>';}
   else if(it.unidad==='hora'&&on)act='<div class="qty"><button type="button" data-hq="'+esc(it.id)+'" data-d="-1" aria-label="Una hora menos">−</button><span><input class="qty-in" type="number" inputmode="numeric" pattern="[0-9]*" data-qin="'+esc(it.id)+'" value="'+q+'" aria-label="Horas de '+esc(it.nombre)+'"> h</span><button type="button" data-hq="'+esc(it.id)+'" data-d="1" aria-label="Una hora más">+</button></div>'+(tieneElem(it)?'<div class="qty"><button type="button" data-eq="'+esc(it.id)+'" data-d="-1" aria-label="Un elemento menos">−</button><span>'+elemSel(it)+' elem.</span><button type="button" data-eq="'+esc(it.id)+'" data-d="1" aria-label="Un elemento más">+</button></div>':'');
   else if(it.unidad==='cantidad'&&on)act='<div class="qty"><button type="button" data-hq="'+esc(it.id)+'" data-d="-1" aria-label="Uno menos">−</button><input class="qty-in" type="number" inputmode="numeric" pattern="[0-9]*" data-qin="'+esc(it.id)+'" value="'+q+'" aria-label="Cantidad de '+esc(it.nombre)+'"><button type="button" data-hq="'+esc(it.id)+'" data-d="1" aria-label="Uno más">+</button></div>';
   else if(it.grupoRequerido)act='<button type="button" class="btn tog '+(on?'btn-chosen':'btn-line')+'" data-item="'+esc(it.id)+'" aria-pressed="'+on+'">'+(on?'Elegido':'Elegir')+'</button>';
   else act='<button type="button" class="btn tog '+(on?'btn-chosen':'btn-line')+'" data-item="'+esc(it.id)+'" aria-pressed="'+on+'">'+(on?'Agregado':'Agregar')+'</button>';
-  return '<div class="item'+(on?' on':'')+'" data-iid="'+esc(it.id)+'"><div>'+itemFotos(it)+(it.etiqueta?'<span class="tag">'+esc(it.etiqueta)+'</span>':'')+'<h3>'+esc(it.nombreCorto||it.nombre)+'</h3>'+(plegar?((it.descripcion||it.detalle)?'<details class="mas"><summary>Qué incluye</summary>'+(it.descripcion?'<p>'+esc(it.descripcion)+'</p>':'')+(it.detalle?'<p>'+esc(it.detalle)+'</p>':'')+'</details>':''):(it.descripcion?'<p>'+esc(it.descripcion)+'</p>':'')+(it.detalle?'<details class="mas"><summary>Ver detalle</summary><p>'+esc(it.detalle)+'</p></details>':''))+(info?'':oculto?(it.ocultarPrecio?'<p class="ip">El costo se suma a tu total</p>':''):'<p class="ip">'+(tieneElem(it)&&on?fmt(precioHoraElem(it,pr))+' por hora ('+elemSel(it)+' elementos)':(it.precioTxt?esc(it.precioTxt):fmt(pr)+' '+esc(it.unidadTxt||UNIDADES[it.unidad]||'')))+extra+((it.precioTxt||!(pr>0))?'':'<span class="iva-i">con IVA '+fmt(conIva(tieneElem(it)&&on?precioHoraElem(it,pr):pr))+'</span>')+'</p>')+'</div><div class="act">'+act+'</div>'+(it.video?'<div class="item-vid"><video'+(it.videoH?' class="h"':'')+' controls playsinline preload="none"'+(it.videoPoster?' poster="'+esc(it.videoPoster)+'"':'')+' src="'+esc(it.video)+'">Tu navegador no puede reproducir este video.</video></div>':'')+(on&&((it.opciones&&it.opciones.length)||it.mezcla)?opcHTML(it):'')+'</div>';
+  return '<div class="item'+(on?' on':'')+'" data-iid="'+esc(it.id)+'"><div>'+itemFotos(it)+(it.etiqueta?'<span class="tag">'+esc(it.etiqueta)+'</span>':'')+'<h3>'+esc(it.nombreCorto||it.nombre)+'</h3>'+(plegar?((it.descripcion||it.detalle)?'<details class="mas"><summary>Qué incluye</summary>'+(it.descripcion?'<p>'+esc(it.descripcion)+'</p>':'')+(it.detalle?'<p>'+esc(it.detalle)+'</p>':'')+'</details>':''):(it.descripcion?'<p>'+esc(it.descripcion)+'</p>':'')+(it.detalle?'<details class="mas"><summary>Ver detalle</summary><p>'+esc(it.detalle)+'</p></details>':''))+(info?'':oculto?(it.ocultarPrecio?'<p class="ip">El costo se suma a tu total</p>':''):'<p class="ip">'+(tieneElem(it)&&on?fmt(precioHoraElem(it,pr))+' por hora ('+elemSel(it)+' elementos)':(it.precioTxt?esc(it.precioTxt):fmt(pr)+' '+esc(it.unidadTxt||UNIDADES[it.unidad]||'')))+extra+((it.precioTxt||!(pr>0))?'':'<span class="iva-i">con IVA '+fmt(conIva(tieneElem(it)&&on?precioHoraElem(it,pr):pr))+'</span>')+'</p>')+(it.id==='mesero'&&!inc?'<p class="ip mes-rec">Recomendado: <b>'+staffSugerido(inv)+'</b> (1 por cada 20 personas).'+(on&&q<staffSugerido(inv)?' <b>Te sugerimos '+staffSugerido(inv)+' para que tu evento esté bien atendido.</b>':'')+'</p>':'')+'</div><div class="act">'+act+'</div>'+(it.video?'<div class="item-vid"><video'+(it.videoH?' class="h"':'')+' controls playsinline preload="none"'+(it.videoPoster?' poster="'+esc(it.videoPoster)+'"':'')+' src="'+esc(it.video)+'">Tu navegador no puede reproducir este video.</video></div>':'')+(on&&((it.opciones&&it.opciones.length)||it.mezcla)?opcHTML(it):'')+'</div>';
 }
 function mezclaHTML(it){
   var m=it.mezcla,mx=(S.mix||{})[it.id]||{},su=mezSum(it),tot=mezTotal(it),paso=+m.paso||10,mn=+m.min||paso;
@@ -1521,7 +1526,7 @@ function v3(){
   var destIds=((D.reglas||{}).extrasDestacados||[]).map(function(d){return d.id;}),destL=[];
   D.items.filter(function(i){return i.activo!==false&&(visibleEnPaquete(i,p)||(i.id==='refresco-hielo'&&destIds.indexOf(i.id)>=0&&!autoDelPaquete(i,p)))&&!extraCercaBloq(i);}).forEach(function(i){if(destIds.indexOf(i.id)>=0){destL.push(i);return;}var cn=esMejora(i)?'Mejora tu comida':i.categoria;var c=cats.find(function(c){return c.n===cn;});if(!c){c={n:cn,l:[]};cats.push(c);}c.l.push(i);});
   var nav=cats.length>1?'<div class="chips cat-nav">'+cats.map(function(c){return '<button type="button" class="chip sm" data-catgo="'+esc('cat-'+c.n)+'" data-catid="cat-'+slug(c.n)+'">'+esc(c.n)+'</button>';}).join('')+'</div>':'';
-  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Precios para tus '+inv+' invitados, antes de IVA. Los de proveedores se confirman: toca «Pedir información». Lo incluido ya viene marcado.</p>'+(tierFecha(S.fecha)==='cerca'?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días solo mostramos los servicios de la terraza. Música, comida, decoración y demás proveedores necesitan más anticipación; si los necesitas, llámanos y vemos si alguno está libre.</p>':'')+nav+'</section>'+(function(){var l=destL.filter(extraOk).sort(function(a,b){return destIds.indexOf(a.id)-destIds.indexOf(b.id);});return l.length?'<section class="block destacados"><h2>Lo más pedido</h2><div class="items">'+l.map(function(i){return itemRow(i,p,inv,true);}).join('')+'</div></section>':'';})()+
+  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Precios para tus '+inv+' invitados, antes de IVA. Lo incluido ya viene marcado.</p>'+interesAviso()+(tierFecha(S.fecha)==='cerca'?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días solo mostramos los servicios de la terraza. Música, comida, decoración y demás proveedores necesitan más anticipación; si los necesitas, llámanos y vemos si alguno está libre.</p>':'')+nav+'</section>'+(function(){var l=destL.filter(extraOk).sort(function(a,b){return destIds.indexOf(a.id)-destIds.indexOf(b.id);});return l.length?'<section class="block destacados"><h2>Lo más pedido</h2><div class="items">'+l.map(function(i){return itemRow(i,p,inv,true);}).join('')+'</div></section>':'';})()+
     cats.map(function(c,ci){
       var visibles=c.l.filter(extraOk);
       var relevante=ci===0||(ci===1&&cats[0].n==='Estilo de banquete');
@@ -1618,6 +1623,7 @@ function v4(){
     '</dl>'+
     '<div class="t-lines"><table class="lines"><tbody>'+rows+'</tbody></table></div>'+
     opcTicketHTML()+
+    (interesLista().length?'<p class="fine interes-t"><b>Me interesa</b> (te confirmamos precio y disponibilidad por WhatsApp): '+esc(interesLista().join(', '))+'</p>':'')+
     '<div class="tot"><span>Subtotal</span><strong>'+fmt(c.total)+'</strong></div>'+
     '<div class="pp-line"><span>IVA '+ivaPct()+'\u00a0%</span><strong>'+fmt(ivaDeC(c))+'</strong></div>'+
     '<div class="pp-line"><span>Total con IVA</span><strong>'+fmt(conIvaC(c))+'</strong></div>'+
@@ -1694,6 +1700,7 @@ function calModal(){
   '</div></div>';
 }
 function render(focusSel){
+  if(S.items&&ajustarMeseros()&&S.step===3)setTimeout(avisoMeseros,50);
   if(S.items&&S.items['refresco-hielo']&&!refrescoOk())delete S.items['refresco-hielo'];
   app.innerHTML=header()+'<main class="wrap stack" id="main">'+[v0,v1,v2,v3,v4][S.step]()+'</main>'+footer()+bar()+(pkgConfirm?depositoModal(pkgConfirm):'');
   guardar();
@@ -1727,6 +1734,7 @@ function mensajeLargo(){
   t+='\n*Subtotal:* '+fmt(c.total)+'\n*'+(c.pagoTotal?'Pago total':'Anticipo ('+c.pct+' %)')+':* '+fmt(c.anticipo)+'\n*Total con IVA:* '+fmt(conIvaC(c))+'\n';
   t+='\n*Nombre:* '+nomLimpio()+'\n*WhatsApp:* '+S.telefono.trim();
   if(S.notas.trim())t+='\n*Comentarios:* '+notasLimpias();
+  if(interesLista().length)t+='\n*Me interesa (precio y disponibilidad a confirmar):* '+interesLista().join(', ');
   if(S.origen)t+='\n*Nos conoció por:* '+origenNombre(S.origen);
   if(S.terms)t+='\n✅ Leí y acepto términos y condiciones, reglamento de daños, política de cancelación y aviso de privacidad.';
   var holdH=tier==='cerca'?(+D.reglas.holdHorasCercano||2):(+D.reglas.holdHoras||12);
@@ -1742,6 +1750,7 @@ function mensaje(){
   t+='*Evento:* '+[S.tipo,S.invitados+' invitados',p?p.nombre:''].filter(Boolean).join(' · ')+'\n';
   t+='*Subtotal:* '+fmt(c.total)+' (antes de IVA)\n*'+(c.pagoTotal?'Pago total':'Anticipo ('+c.pct+' %)')+':* '+fmt(c.anticipo)+'\n';
   if(S.notas.trim())t+='*Comentarios:* '+notasLimpias()+'\n';
+  if(interesLista().length)t+='*Me interesa (precio y disponibilidad a confirmar):* '+interesLista().join(', ')+'\n';
   if(tier==='cerca')t+='⚠️ Fecha próxima: apartado de solo '+(+D.reglas.holdHorasCercano||2)+' h.\n';
   if(S.terms)t+='✅ Leí y acepto términos y aviso de privacidad.\n';
   return t+'\nMi cotización: '+appUrl()+'#q='+kQ();
@@ -1912,6 +1921,7 @@ app.addEventListener('click',function(e){
     if(!validSend()){e.preventDefault();if(datosOk()&&faltaOpc()){S.step=3;render();arriba();var fl3=faltante();if(fl3)setTimeout(function(){irAFalta(fl3);},60);else toast(faltaMsg());}else if(datosOk()){toast('Acepta los términos y condiciones para enviar.');irAFaltantes();}else{toast('Escribe tu nombre y tu número de WhatsApp.');irAFaltantes();}}
     return;
   }
+  if(ds.interes){S.interes=S.interes||{};if(S.interes[ds.interes])delete S.interes[ds.interes];else S.interes[ds.interes]=1;render('[data-interes="'+ds.interes+'"]');return;}
   if(ds.pq){pqHacer(ds.pq);return;}
   if('admin' in ds){abrirAdmin();return;}
   if(ds.go!==undefined){if(+ds.go>S.step){var fg=faltante();if(fg){irAFalta(fg);return;}}S.step=+ds.go;render();arriba();return;}
@@ -1975,6 +1985,7 @@ app.addEventListener('click',function(e){
     var rc2=recortarHorasExtra();render('[data-item="'+ds.item+'"],[data-hq="'+ds.item+'"]');if(rc2)avisoLimiteHora();return;
   }
   if(ds.eq){var ite=item(ds.eq);if(ite&&S.items[ds.eq]){var b0=+ite.elemBase||4,mx0=+ite.elemMax||12;S.elem[ds.eq]=Math.min(mx0,Math.max(b0,elemSel(ite)+(+ds.d)));guardar();render('[data-hq="'+ds.eq+'"],[data-item="'+ds.eq+'"]');}return;}
+  if(ds.hq==='mesero'&&+ds.d<0){var qm=(S.items.mesero||0)-1,mnm=minMeseros(S.invitados);if(qm<mnm){delete S.items.mesero;toast('Quitamos los meseros.');}else{S.items.mesero=qm;if(qm<staffSugerido(S.invitados))avisoMeseros();}var rcm=recortarHorasExtra();render('[data-hq="mesero"],[data-item="mesero"]');if(rcm)avisoLimiteHora();return;}
   if(ds.hq){var itq=item(ds.hq);var minH=(itq&&itq.unidad==='hora'&&itq.minHoras)?itq.minHoras:((itq&&+itq.minCant>0)?+itq.minCant:0);var pas=(itq&&+itq.paso)||1;var q=(S.items[ds.hq]||0)+(+ds.d)*pas;var qmax=(itq&&+itq.maxCant)||((itq&&itq.unidad==='cantidad')?20:6);if(q<=0||(minH>0&&q<minH&&+ds.d<0))delete S.items[ds.hq];else S.items[ds.hq]=Math.min(Math.max(q,minH||pas),qmax);var rc1=recortarHorasExtra();render('[data-hq="'+ds.hq+'"],[data-item="'+ds.hq+'"]');if(rc1)avisoLimiteHora();return;}
   if('goterms' in ds){var tt=document.getElementById('terminos');if(tt){tt.querySelectorAll('details').forEach(function(d){d.open=true;igOpen[d.dataset.ig]=1;});tt.scrollIntoView({block:'start',behavior:'smooth'});}return;}
   if('consulta' in ds){consultar();return;}
@@ -2017,7 +2028,7 @@ var ptrC=false,pendC=false;
 document.addEventListener('pointerdown',function(){ptrC=true;},true);
 document.addEventListener('pointerup',function(){ptrC=false;setTimeout(function(){if(pendC){pendC=false;render();}},80);},true);
 document.addEventListener('pointercancel',function(){ptrC=false;if(pendC){pendC=false;render();}},true);
-app.addEventListener('change',function(e){if(e.target.id==='f-hora'){S.horario=e.target.value;var rch=recortarHorasExtra();render();if(rch)avisoLimiteHora();return;}if(e.target.dataset&&e.target.dataset.qin){var qi=e.target.dataset.qin,itq=item(qi);if(!itq)return;var minH=(itq.unidad==='hora'&&itq.minHoras)?itq.minHoras:(+itq.minCant>0?+itq.minCant:0),pas=+itq.paso||1,qmax=+itq.maxCant||(itq.unidad==='cantidad'?20:6),v=parseInt(e.target.value,10);if(!(v>0))delete S.items[qi];else{v=Math.ceil(v/pas)*pas;var vv=Math.min(Math.max(v,minH||pas),qmax);if(vv!==v)toast('Ajustamos a '+vv+(itq.unidad==='hora'?' h':'')+': es el mínimo o máximo.');S.items[qi]=vv;}var rcq=recortarHorasExtra();render('[data-hq="'+qi+'"],[data-item="'+qi+'"]');if(rcq)avisoLimiteHora();return;}if(e.target.id==='f-terms'&&e.target.checked){var lb=e.target.closest('label');if(lb)lb.classList.remove('terms-miss');}if(e.target.id==='inv'){var tv=parseInt(e.target.value,10);setInv(tv);if(tv!==S.invitados)toast('Ajustamos a '+S.invitados+' invitados: es el mínimo o máximo para esta fecha.');if(ptrC)pendC=true;else render();}if(e.target.id==='f-terms'){S.terms=e.target.checked;var tl=e.target.closest('label');if(tl)tl.classList.toggle('terms-miss',!e.target.checked);guardar();updateSend();}});
+app.addEventListener('change',function(e){if(e.target.id==='f-hora'){S.horario=e.target.value;var rch=recortarHorasExtra();render();if(rch)avisoLimiteHora();return;}if(e.target.dataset&&e.target.dataset.qin){var qi=e.target.dataset.qin,itq=item(qi);if(!itq)return;var minH=(itq.unidad==='hora'&&itq.minHoras)?itq.minHoras:(+itq.minCant>0?+itq.minCant:0),pas=+itq.paso||1,qmax=+itq.maxCant||(itq.unidad==='cantidad'?20:6),v=parseInt(e.target.value,10);if(!(v>0))delete S.items[qi];else{v=Math.ceil(v/pas)*pas;var vv=Math.min(Math.max(v,minH||pas),qmax);if(qi==='mesero'&&vv<minMeseros(S.invitados)){vv=minMeseros(S.invitados);avisoMeseros();}else if(vv!==v)toast('Ajustamos a '+vv+(itq.unidad==='hora'?' h':'')+': es el mínimo o máximo.');else if(qi==='mesero'&&vv<staffSugerido(S.invitados))avisoMeseros();S.items[qi]=vv;}var rcq=recortarHorasExtra();render('[data-hq="'+qi+'"],[data-item="'+qi+'"]');if(rcq)avisoLimiteHora();return;}if(e.target.id==='f-terms'&&e.target.checked){var lb=e.target.closest('label');if(lb)lb.classList.remove('terms-miss');}if(e.target.id==='inv'){var tv=parseInt(e.target.value,10);setInv(tv);if(tv!==S.invitados)toast('Ajustamos a '+S.invitados+' invitados: es el mínimo o máximo para esta fecha.');if(ptrC)pendC=true;else render();}if(e.target.id==='f-terms'){S.terms=e.target.checked;var tl=e.target.closest('label');if(tl)tl.classList.toggle('terms-miss',!e.target.checked);guardar();updateSend();}});
 app.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.qin){e.preventDefault();e.target.blur();}});
 app.addEventListener('toggle',function(e){var d=e.target;if(d&&d.dataset&&d.dataset.ig){if(d.open)igOpen[d.dataset.ig]=1;else delete igOpen[d.dataset.ig];}if(d&&d.dataset&&d.dataset.pk){if(d.open)openPk[d.dataset.pk]=1;else delete openPk[d.dataset.pk];}if(d&&d.dataset&&d.dataset.cat){openCat[d.dataset.cat]=d.open;}},true);
 
@@ -3113,7 +3124,7 @@ function contratoEstadoHtml(r,i){
   var ab=+r.abono>0,ine=!!(r.ineNombre&&r.ineClave&&r.ineDomicilio),vig=ineVigente(r.ineVigencia),ok=contratoCompleto(r);
   function m(b){return b?'✅':'⬜';}
   ineInputGlobal().dataset.i=i;
-  var subir='<button type="button" class="btn '+(ab&&!r.ineNombre?'btn-main':'btn-line')+' sm" data-a="ine-subir" data-i="'+i+'">📷 '+(r.ineNombre?'Volver a subir INE':'Subir INE')+'</button>';
+  var subir='<label for="ine-global" role="button" tabindex="0" class="btn '+(ab&&!r.ineNombre?'btn-main':'btn-line')+' sm" data-a="ine-subir" data-i="'+i+'">📷 '+(r.ineNombre?'Volver a subir INE':'Subir INE')+'</label>';
   var imsg=(A.ineMsg&&A.ineMsg[r.id])||'';
   if(((A.ineLast&&A.ineLast[r.id])||ineUlt(r.id))&&!(r.ineNombre&&r.ineClave&&r.ineDomicilio))subir+='<button type="button" class="btn btn-line sm" data-a="ine-reintentar" data-i="'+i+'" title="Reintentar con las mismas fotos" aria-label="Reintentar con las mismas fotos" style="min-width:44px;padding:0 12px;font-size:1.15rem;line-height:1">↻</button>';
   if(ab&&!r.ineNombre&&!A.permAsked){A.permAsked=1;setTimeout(function(){try{if(window.claude&&typeof window.claude.use==='function')window.claude.use('permissions').then(function(pm){if(pm&&pm.request)pm.request(['sample']).catch(function(){});}).catch(function(){});}catch(e){}},400);}
@@ -3668,9 +3679,9 @@ function recPuente(){
     document.title='Agendar · '+(D.negocio.nombre||'');
     app.innerHTML='<main class="wrap stack" style="padding-top:28px"><section class="block"><h2 style="margin:0 0 6px">Agendar en tu calendario</h2>'+
       '<p style="margin:0 0 4px"><b>'+esc(qp.text||'Evento')+'</b></p>'+(fe?'<p class="hint" style="margin:0 0 14px">'+esc(cap(fechaLarga(fe[1]+'-'+fe[2]+'-'+fe[3])))+' · '+fe[4]+':'+fe[5]+' h</p>':'')+
-      '<div style="display:grid;gap:10px"><a class="btn btn-main" href="'+esc(gu)+'">📅 Abrir en Google Calendar</a><a class="btn btn-line" href="'+esc(web)+'">Abrir en la página de Google Calendar</a></div>'+
+      '<div style="display:grid;gap:10px"><a class="btn btn-main" href="'+esc(/Android/i.test(navigator.userAgent||'')?'intent://'+gu.replace(/^https:\/\//,'')+'#Intent;scheme=https;package=com.google.android.calendar;S.browser_fallback_url='+encodeURIComponent(gu)+';end':gu)+'">📅 Abrir en Google Calendar</a><a class="btn btn-line" href="'+esc(web)+'">Abrir en la página de Google Calendar</a></div>'+
       '<p class="hint">Revisa que la fecha y los datos estén llenos y toca «Guardar». Para regresar a Kalli, cierra esta pestaña.</p></section></main>';
-    try{var kk='kalli-gcal-auto';if(sessionStorage.getItem(kk)!==m[2]){sessionStorage.setItem(kk,m[2]);setTimeout(function(){location.href=gu;},250);}}catch(e){}
+    /* sin abrir solo: desde la app de Claude (pestaña de Chrome) abría la web; con el toque abre la app de Calendar */
     return true;}
   try{if(window.top!==window.self)return false;}catch(e){return false;}
   if(m[1]==='ine'){ineVista(decodeURIComponent(m[2]));return true;}
@@ -3917,6 +3928,7 @@ async function respOk(){
 }
 function accionAdmin(a,t){
   var d=A.draft,k,i,arr;
+  /* un solo menú abierto: cualquier otro botón cierra «Más» */ if(a!=='recibo-mas'&&A.recMas!=null&&!(t&&t.closest&&t.closest('.rc-mas')))A.recMas=null;
   switch(a){
     case 'close':cerrarAdmin();break;
     case 'respaldar':respaldarNube(true);break;
@@ -3985,10 +3997,10 @@ function accionAdmin(a,t){
     case 'recibo-autorizar':{i=+t.dataset.i;if(!REC[i])break;REC[i].ineOk=true;guardarRecibos();A.status='Contrato autorizado. Se abrió la página para enviarle recibo y contrato.';setTimeout(function(){renderAdmin(true);},60);break;}
     case 'recibo-desautorizar':{i=+t.dataset.i;if(!REC[i])break;REC[i].ineOk=false;guardarRecibos();A.status='Autorización quitada.';renderAdmin(true);break;}
     case 'recibo-parse':{i=+t.dataset.i;var ta=document.getElementById('rc-paste-'+i);var ineP=parseIne(ta?ta.value:''),rc=REC[i];if(rc&&ineP&&rc.folio&&ineP.folio&&ineP.folio!=='—'&&ineP.folio!==rc.folio){A.status='Ese INE es del folio '+ineP.folio+', no de este recibo ('+rc.folio+'). Pégalo en el recibo correcto.';refreshFoot();break;}if(rc&&ineP){delete pasteBuf['rc-paste-'+i];['ineNombre','ineDomicilio','ineClave','ineVigencia'].forEach(function(k){if(ineP[k])rc[k]=ineP[k];});if(ineP.telefono&&!rc.telefono)rc.telefono=ineP.telefono;guardarRecibos();if(A.recEdit===i)A.recEdit=null;rc.ineOk=false;A.status='Listo: datos del INE cargados. Revísalos y toca «Autorizar y enviar».';renderAdmin(true);break;}var pr=prDeTexto(ta?ta.value:'');delete pasteBuf['rc-paste-'+i];if(rc){llenarReciboCot(rc,pr);guardarRecibos();if(pr.lineas.length&&A.recEdit===i)A.recEdit=null;A.status=pr.lineas.length?'Listo: recibo lleno con la cotización.':'No encontré la cotización en ese texto. Pega el mensaje completo.';renderAdmin(true);}break;}
-    case 'recibo-editar':{i=+t.dataset.i;A.recEdit=A.recEdit===i?null:i;renderAdmin(true);break;}
-    case 'ine-subir':{var ei=ineInputGlobal();ei.dataset.i=t.dataset.i;ei.click();break;}
+    case 'recibo-editar':{i=+t.dataset.i;A.recEdit=A.recEdit===i?null:i;if(A.recEdit!==null)A.recMas=null;renderAdmin(true);break;}
+    case 'ine-subir':{var ei=ineInputGlobal();ei.dataset.i=t.dataset.i;/* el <label for> abre el selector solo (más seguro en la app de Claude) */if(t.tagName!=='LABEL')ei.click();break;}
     case 'ine-reintentar':{i=+t.dataset.i;var rcx=REC[i];if(rcx){if(A.ineLast&&A.ineLast[rcx.id])leerIne(i,A.ineLast[rcx.id]);else{var du0=ineUlt(rcx.id);if(du0)ineFilesDe(du0).then(function(f0){leerIne(i,f0);});}}break;}
-    case 'recibo-mas':{i=+t.dataset.i;A.recMas=A.recMas===i?null:i;renderAdmin(true);setTimeout(function(){var m=document.querySelector('.rc-mas');if(m&&m.scrollIntoView)m.scrollIntoView({block:'nearest'});},60);break;}
+    case 'recibo-mas':{i=+t.dataset.i;A.recMas=A.recMas===i?null:i;if(A.recMas!==null)A.recEdit=null;renderAdmin(true);setTimeout(function(){var m=document.querySelector('.rc-mas');if(m&&m.scrollIntoView)m.scrollIntoView({block:'nearest'});},60);break;}
     case 'recibo-pdf':{i=+t.dataset.i;generarReciboPDF(REC[i]);break;}
     case 'danos-toggle':{var rt=REC[+t.dataset.i];if(rt)A.danosOpen=A.danosOpen===rt.id?null:rt.id;renderAdmin(true);break;}
     case 'dano-add':{var ra=REC[+t.dataset.i],da=ra&&A.danosDraft&&A.danosDraft[ra.id],it=da&&String(da.k)!==''?(D.negocio.danios||[])[+da.k]:null;
