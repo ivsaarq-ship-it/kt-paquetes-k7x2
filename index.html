@@ -863,7 +863,7 @@ function duenoIr(u){try{var o=document.getElementById('dueno-ir');if(o)o.remove(
 function duenoSitio(){try{var h=location.hash||'',K='kalli-dueno-sitio',adm=String((D.negocio&&D.negocio.urlAdmin)||''),pub='';try{pub=new URL(String((D.negocio&&D.negocio.urlApp)||'')).origin;}catch(e0){}
   if(location.origin!==pub)return;
   if(h==='#soy-dueno'||h==='#no-dueno'){if(h==='#soy-dueno')localStorage.setItem(K,'1');else localStorage.removeItem(K);history.replaceState(null,'',location.pathname+location.search);var msg=h==='#soy-dueno'?'Listo: en este celular, los links de cotización abrirán tu Admin.':'Este celular ya no abre Admin con los links.';setTimeout(function(){try{toast(msg);}catch(e1){}},700);return;}
-  if(localStorage.getItem(K)==='1'&&(/^#[qk]=[A-Za-z0-9_.~-]+$/.test(h)||/^#(ref|admin)(:|$)/.test(h))&&/^https:\/\//.test(adm))duenoIr(adm.split('#')[0]+h);
+  if(localStorage.getItem(K)==='1'&&(/^#[qk]=[A-Za-z0-9_.~-]+$/.test(h)||/^#(ref|admin)(:|$)/.test(h))&&/^https:\/\//.test(adm))location.replace(adm.split('#')[0]+h);
 }catch(e){}} duenoSitio(); /* si la pestaña ya estaba en el sitio, el link solo cambia el # (no recarga): revisar otra vez */ window.addEventListener('hashchange',duenoSitio);
 if(location.hash==='#nuevo'){try{localStorage.removeItem(KEY);}catch(e){}try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
 var S=Object.assign(nuevoEstado(),cargar()||{});
