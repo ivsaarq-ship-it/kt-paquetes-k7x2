@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Gloock&display=swap">
 <style id="kalli-css">
+.origen-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:0;max-width:100%}.origen-row .chip.sm{min-height:40px;padding:0 6px;font-size:.78rem;white-space:nowrap;flex:0 0 auto}.field .origen-row .origen-sel{padding:0 20px 0 8px;font-size:.8rem;font-weight:600;border-radius:999px}.origen-row .origen-sel{display:inline-block;width:82px;flex:0 0 auto;max-width:100%;min-height:40px;text-overflow:ellipsis;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:.78rem;padding:0 14px 0 6px}.origen-sel.on{border-color:var(--gold);background:var(--gold-soft)}.bar-terms{display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--ink-2);min-height:34px;margin:0 0 4px;padding:0 2px}.bar-terms input{width:20px;height:20px;flex:none;accent-color:var(--gold);margin:0}.bar-terms.terms-miss{color:var(--busy)}
 .ct-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.ct-chk{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:4px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit;text-decoration:none;cursor:pointer}span.ct-chk{cursor:default;border-style:dashed}
 .interes-aviso{background:var(--surface);border:1px dashed var(--gold-line);border-radius:var(--r-sm);padding:10px 12px;margin:10px 0 0}.interes-t{margin:8px 0}
 :root{
@@ -95,7 +96,7 @@ a{color:var(--agave)}
 .st:disabled{opacity:.45;cursor:default}
 
 /* estructura */
-main{padding-block:22px calc(112px + env(safe-area-inset-bottom,0px))}
+main{padding-block:22px 0}
 .stack{display:flex;flex-direction:column;gap:24px}
 .intro h1{font-family:var(--f-display);font-weight:400;font-size:clamp(2rem,7.5vw,2.6rem);line-height:1.05;margin:0 0 8px;text-wrap:balance}
 .intro-sm h1{font-size:clamp(1.7rem,6vw,2.1rem)}
@@ -330,7 +331,7 @@ details summary{cursor:pointer;color:var(--agave);font-weight:600;font-size:.93r
 .inc-badge{font-size:.78rem;font-weight:700;color:var(--agave);background:var(--agave-soft);padding:7px 10px;border-radius:8px;text-align:center;max-width:120px;line-height:1.25}
 
 /* cotización */
-.ticket{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ticket{background:var(--surface);border:2px solid var(--night);border-radius:var(--r);overflow:hidden;box-shadow:0 8px 24px rgba(10,20,15,.14)}
 .ticket-h{background:var(--night);color:var(--night-ink);padding:14px 16px;display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
 .t-title{font-family:var(--f-display);font-size:1.35rem}
 .folio{font-size:.82rem;letter-spacing:.08em;color:var(--night-mute);font-variant-numeric:tabular-nums}
@@ -392,7 +393,7 @@ details summary{cursor:pointer;color:var(--agave);font-weight:600;font-size:.93r
 .buzon details{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
 .buzon textarea{width:100%;margin-top:10px;font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:80px;resize:vertical}
 .buzon .alt-btns{margin-top:10px}
-.pie-espacio{height:calc(150px + env(safe-area-inset-bottom,0px))}
+.pie-espacio{height:calc(180px + env(safe-area-inset-bottom,0px))}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
 .kpi span{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
@@ -1639,13 +1640,15 @@ function v4(){
       'Fecha muy próxima: solo la apartamos '+(+D.reglas.holdHorasCercano||2)+' horas. Escríbenos ya al '+telsNegocio(' o al ')+'.'
     )+'</p>'+
   '</section>'+
-  '<section class="block"><div class="form">'+
-    '<label class="chk terms-ok"><input type="checkbox" id="f-terms"'+(S.terms?' checked':'')+'><span>Leí y acepto los términos y condiciones, el reglamento de daños, la política de cancelación y el aviso de privacidad. <button type="button" class="btn btn-ghost sm" style="min-height:0;padding:0 4px;text-decoration:underline" data-goterms>Leerlos</button></span></label>'+
-    (tier==='cerca'?'<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Ponte en contacto</a>':'')+
-    '<label class="field">Comentarios <span class="opt">(opcional)</span><textarea id="f-notas" rows="3" maxlength="600" placeholder="Temática, colores, dudas…">'+esc(S.notas)+'</textarea></label>'+
-    '<div class="field"><span>¿Cómo nos conociste? <span class="opt">(opcional, nos ayuda mucho)</span></span><div class="chips">'+ORIGENES.map(function(o){return '<button type="button" class="chip sm'+(S.origen===o[0]?' on':'')+'" data-origen="'+o[0]+'" aria-pressed="'+(S.origen===o[0])+'">'+o[1]+'</button>';}).join('')+'</div></div>'+
-    '<p class="hint" id="wa-hint"></p>'+
+  '<section class="block">'+
     '<div class="alt"><p>¿No se abre WhatsApp? Escribe al <strong>'+telVisible(n.whatsapp)+'</strong>'+(tel2()?' o al <strong>'+tel2()+'</strong>':'')+' y pega tu cotización.</p><div class="alt-btns"><button type="button" class="btn btn-line sm" data-copy="msg">Copiar cotización</button><button type="button" class="btn btn-ghost sm" data-copy="num">Copiar número</button></div><textarea id="copy-fb" class="copy-fb" readonly hidden aria-label="Cotización para copiar"></textarea></div>'+
+  '</section>'+
+  '<section class="block"><div class="form">'+
+        (tier==='cerca'?'<a class="btn btn-line" href="'+esc(waContacto())+'" target="_blank" rel="noopener">Ponte en contacto</a>':'')+
+    '<label class="field">Comentarios <span class="opt">(opcional)</span><textarea id="f-notas" rows="3" maxlength="600" placeholder="Temática, colores, dudas…">'+esc(S.notas)+'</textarea></label>'+
+    '<div class="field"><span>¿Cómo nos conociste? <span class="opt">(opcional, nos ayuda mucho)</span></span><div class="origen-row">'+ORIGENES.filter(function(o){return ['fb','ig','wa'].indexOf(o[0])>=0;}).map(function(o){return '<button type="button" class="chip sm'+(S.origen===o[0]?' on':'')+'" data-origen="'+o[0]+'" aria-pressed="'+(S.origen===o[0])+'">'+o[1]+'</button>';}).join('')+'<select id="f-origen-mas" class="origen-sel'+(['tt','google','reco','paso','otro'].indexOf(S.origen)>=0?' on':'')+'" aria-label="Otro medio"><option value="">Más</option>'+ORIGENES.filter(function(o){return ['tt','google','reco','paso','otro'].indexOf(o[0])>=0;}).map(function(o){return '<option value="'+o[0]+'"'+(S.origen===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></div></div>'+
+    '<p class="hint" id="wa-hint"></p>'+
+    
     avisoSimple()+
   '</div></section>'+
   estadoExtrasHtml()+
@@ -1693,7 +1696,8 @@ function bar(){
   var sum=puedeCambiar?
     '<button type="button" class="bar-sum bar-sum-btn" data-open-cal aria-label="Cambiar fecha, actualmente '+esc(fechaLarga(S.fecha))+'"><span class="bar-l">'+l+' <span class="bar-edit" aria-hidden="true">· cambiar ✎</span></span><strong class="bar-v">'+v+'</strong></button>':
     '<div class="bar-sum"><span class="bar-l">'+l+'</span><strong class="bar-v">'+v+'</strong></div>';
-  return '<div class="bar"><div class="wrap bar-in">'+sum+fabWa()+'<div class="bar-act">'+(S.step>0?'<button type="button" class="btn btn-ghost bk" data-back aria-label="Atrás"><svg class="bk-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="bk-t">Atrás</span></button>':'')+prim+'</div></div></div>'+(calOpen?calModal():'');
+  var tyc=(S.step===4&&!esContactoChico()&&!avisoPendiente())?'<div class="wrap"><label class="bar-terms'+(S.terms?'':' terms-miss')+'"><input type="checkbox" id="f-terms"'+(S.terms?' checked':'')+'><span>Acepto los términos y condiciones. <button type="button" class="btn btn-ghost sm" style="min-height:0;padding:0 4px;text-decoration:underline" data-goterms>Leer más</button></span></label></div>':'';
+  return '<div class="bar">'+tyc+'<div class="wrap bar-in">'+sum+fabWa()+'<div class="bar-act">'+(S.step>0?'<button type="button" class="btn btn-ghost bk" data-back aria-label="Atrás"><svg class="bk-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="bk-t">Atrás</span></button>':'')+prim+'</div></div></div>'+(calOpen?calModal():'');
 }
 function calModal(){
   return '<div class="modal-cal" role="dialog" aria-modal="true" aria-label="Cambiar fecha"><div class="modal-cal-card">'+
@@ -2031,7 +2035,7 @@ var ptrC=false,pendC=false;
 document.addEventListener('pointerdown',function(){ptrC=true;},true);
 document.addEventListener('pointerup',function(){ptrC=false;setTimeout(function(){if(pendC){pendC=false;render();}},80);},true);
 document.addEventListener('pointercancel',function(){ptrC=false;if(pendC){pendC=false;render();}},true);
-app.addEventListener('change',function(e){if(e.target.id==='f-hora'){S.horario=e.target.value;var rch=recortarHorasExtra();render();if(rch)avisoLimiteHora();return;}if(e.target.dataset&&e.target.dataset.qin){var qi=e.target.dataset.qin,itq=item(qi);if(!itq)return;var minH=(itq.unidad==='hora'&&itq.minHoras)?itq.minHoras:(+itq.minCant>0?+itq.minCant:0),pas=+itq.paso||1,qmax=+itq.maxCant||(itq.unidad==='cantidad'?20:6),v=parseInt(e.target.value,10);if(!(v>0))delete S.items[qi];else{v=Math.ceil(v/pas)*pas;var vv=Math.min(Math.max(v,minH||pas),qmax);if(qi==='mesero'&&vv<minMeseros(S.invitados)){vv=minMeseros(S.invitados);avisoMeseros();}else if(vv!==v)toast('Ajustamos a '+vv+(itq.unidad==='hora'?' h':'')+': es el mínimo o máximo.');else if(qi==='mesero'&&vv<staffSugerido(S.invitados))avisoMeseros();S.items[qi]=vv;}var rcq=recortarHorasExtra();render('[data-hq="'+qi+'"],[data-item="'+qi+'"]');if(rcq)avisoLimiteHora();return;}if(e.target.id==='f-terms'&&e.target.checked){var lb=e.target.closest('label');if(lb)lb.classList.remove('terms-miss');}if(e.target.id==='inv'){var tv=parseInt(e.target.value,10);setInv(tv);if(tv!==S.invitados)toast('Ajustamos a '+S.invitados+' invitados: es el mínimo o máximo para esta fecha.');if(ptrC)pendC=true;else render();}if(e.target.id==='f-terms'){S.terms=e.target.checked;var tl=e.target.closest('label');if(tl)tl.classList.toggle('terms-miss',!e.target.checked);guardar();updateSend();}});
+app.addEventListener('change',function(e){if(e.target.id==='f-hora'){S.horario=e.target.value;var rch=recortarHorasExtra();render();if(rch)avisoLimiteHora();return;}if(e.target.dataset&&e.target.dataset.qin){var qi=e.target.dataset.qin,itq=item(qi);if(!itq)return;var minH=(itq.unidad==='hora'&&itq.minHoras)?itq.minHoras:(+itq.minCant>0?+itq.minCant:0),pas=+itq.paso||1,qmax=+itq.maxCant||(itq.unidad==='cantidad'?20:6),v=parseInt(e.target.value,10);if(!(v>0))delete S.items[qi];else{v=Math.ceil(v/pas)*pas;var vv=Math.min(Math.max(v,minH||pas),qmax);if(qi==='mesero'&&vv<minMeseros(S.invitados)){vv=minMeseros(S.invitados);avisoMeseros();}else if(vv!==v)toast('Ajustamos a '+vv+(itq.unidad==='hora'?' h':'')+': es el mínimo o máximo.');else if(qi==='mesero'&&vv<staffSugerido(S.invitados))avisoMeseros();S.items[qi]=vv;}var rcq=recortarHorasExtra();render('[data-hq="'+qi+'"],[data-item="'+qi+'"]');if(rcq)avisoLimiteHora();return;}if(e.target.id==='f-terms'&&e.target.checked){var lb=e.target.closest('label');if(lb)lb.classList.remove('terms-miss');}if(e.target.id==='inv'){var tv=parseInt(e.target.value,10);setInv(tv);if(tv!==S.invitados)toast('Ajustamos a '+S.invitados+' invitados: es el mínimo o máximo para esta fecha.');if(ptrC)pendC=true;else render();}if(e.target.id==='f-origen-mas'){S.origen=e.target.value||null;guardar();render();return;}if(e.target.id==='f-terms'){S.terms=e.target.checked;var tl=e.target.closest('label');if(tl)tl.classList.toggle('terms-miss',!e.target.checked);guardar();updateSend();}});
 app.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.qin){e.preventDefault();e.target.blur();}});
 app.addEventListener('toggle',function(e){var d=e.target;if(d&&d.dataset&&d.dataset.ig){if(d.open)igOpen[d.dataset.ig]=1;else delete igOpen[d.dataset.ig];}if(d&&d.dataset&&d.dataset.pk){if(d.open)openPk[d.dataset.pk]=1;else delete openPk[d.dataset.pk];}if(d&&d.dataset&&d.dataset.cat){openCat[d.dataset.cat]=d.open;}},true);
 
