@@ -2752,7 +2752,9 @@ function admRentas(){
   var tabla='<div style="overflow-x:auto"><table class="stat-t rt-t"><thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Paquete</th><th class="n">Inv.</th><th class="n">Total</th><th class="n">Abonado</th><th class="n">Saldo</th><th class="n">Costo</th><th class="n">Ganancia</th><th>Estado</th><th>Archivos</th></tr></thead><tbody>'+filas+
     '<tr class="rt-tot"><td colspan="5"><strong>Total</strong></td><td class="n"><strong>'+fmt(sum('total'))+'</strong></td><td class="n"><strong>'+fmt(sum('abono'))+'</strong></td><td class="n"><strong>'+fmt(sum('saldo'))+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('costo')):'—')+'</strong></td><td class="n"><strong>'+(hay?fmt(sum('ganancia')):'—')+'</strong></td><td></td><td></td></tr></tbody></table></div>';
   var aster=C.some(function(c){return c.sinCosto.length;})?'<p class="hint" style="margin:6px 0 0">* Tiene banquete o meseros y no encontré su costo (falta en tus costos privados o el recibo no dice qué comida lleva): esa ganancia sale más alta de lo real.</p>':'';
-  return '<section class="block"><h2>Rentas</h2>'+chips+kpis+tabla+aster+
+  /* 21 nov: la lista de rentas se abre con un botón (no ocupa la pantalla hasta que la abres) */
+  var lista='<div style="margin-top:12px"><button type="button" class="btn btn-line sm" data-a="rt-lista">'+(A.rtLista?'▴ Ocultar lista de rentas':'▾ Ver lista de rentas ('+L.length+')')+'</button></div>';
+  return '<section class="block"><h2>Rentas</h2>'+chips+kpis+lista+(A.rtLista?tabla:'')+aster+
     '<div class="adm-btns" style="margin-top:12px"><button type="button" class="btn btn-main sm" data-a="rt-excel">⬇ Descargar para Excel</button>'+(impInputGlobal()?'<label for="imp-global" class="btn btn-line sm" style="cursor:pointer">⬆ Importar recibos</label>':'')+'</div>'+impPegarHtml()+nota+bloque+'</section>'+admEventos();
 }
 /* Admin › Rentas › «Eventos realizados» y «Movimientos de Kalli»: datos solo de este celular (kalli-privado-v1); entran al respaldo cifrado y al link privado. */
@@ -4078,6 +4080,7 @@ function accionAdmin(a,t){
     case 'apartado-confirmar':{i=+t.dataset.i;var ap=d.apartados[i];if(ap&&ap.fecha){marcarHistorial(d,ap.folio||ap.nota,'confirmado');if(!ocupadaEn(d,ap.fecha))d.ocupadas.push({fecha:ap.fecha,nota:ap.folio||ap.nota||'Reservado'});d.ocupadas.sort(function(a,b){return a.fecha<b.fecha?-1:1;});d.apartados.splice(i,1);marcarCambio();renderAdmin(true);autoPublicar();}break;}
     case 'st-per':A.stPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-per':A.rtPer=t.dataset.v;renderAdmin(true);break;
+    case 'rt-lista':A.rtLista=!A.rtLista;renderAdmin(true);break;
     case 'rt-vista':A.rtVista=t.dataset.v;renderAdmin(true);break;
     case 'rt-cal':A.rtCal=rtMes(A.rtCal||iso(hoy).slice(0,7),+t.dataset.v);A.rtDia='';renderAdmin(true);break;
     case 'rt-dia':A.rtDia=A.rtDia===t.dataset.v?'':t.dataset.v;renderAdmin(true);break;
