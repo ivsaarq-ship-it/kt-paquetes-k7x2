@@ -178,6 +178,8 @@ details.cat>.items{margin-top:12px}
 .rt-d.sel{outline:2px solid var(--gold);outline-offset:1px}
 .rt-det{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .btn.rt-azul{background:#2563EB;border-color:#2563EB;color:#FFFFFF;font-weight:600}
+.rc-pas{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;padding:8px 0;font:inherit;color:var(--ink);text-align:left;cursor:pointer;font-weight:600}
+.rc-flecha{font-size:1.1rem;color:var(--ink-3)}
 .o-info{flex:1 1 100%;font-size:.92rem;line-height:1.45;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);overflow-wrap:anywhere}
 .day.busy.pasada{background:var(--surface-2);color:var(--ink-3);text-decoration:line-through}
 .day.sel{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
@@ -2418,7 +2420,7 @@ function admRecibos(){
     var ev=[r.fecha,reciboPaquete(r),r.invitados?(r.invitados+' inv.'):''].filter(Boolean).join(' · ');
     var due=R.saldo<=0?'<p class="pay-due">Liquidado ✅</p>':'<p class="pay-due'+(!R.lim||R.dias<0?' late':(R.dias<=7?' soon':''))+'">'+esc(limiteTxt(R,true))+'</p>';
     /* 21 nov: un evento ya pasado solo muestra su saldo (liquidado) y la sección de daños */
-    if(!r.cargoDe&&!vacio&&fechaISODeTexto(r.fecha)&&fechaISODeTexto(r.fecha)<iso(hoy)){return '<div class="ed rc"><div class="rc-top"><strong>'+esc(r.cliente)+(r.folio?' <small>'+esc(r.folio)+'</small>':'')+'</strong><span class="rc-chip rc-'+esc(r.estado||'apartado')+'">'+R.estado+'</span></div>'+(ev?'<p class="hint" style="margin:0">'+esc(ev)+'</p>':'')+'<div class="rc-nums"><div><span>Total</span><b>'+fmt(R.total)+'</b></div><div><span>Abonado</span><b>'+fmt(R.abono)+'</b></div><div><span>Saldo</span><b class="'+(R.saldo>0?'rc-debe':'rc-ok')+'">'+fmt(R.saldo)+'</b></div></div>'+due+danosHtml(r,i)+'</div>';}
+    if(!r.cargoDe&&!vacio&&fechaISODeTexto(r.fecha)&&fechaISODeTexto(r.fecha)<iso(hoy)){var abre=!!(A.recPas&&A.recPas[i]);return '<div class="ed rc"><button type="button" class="rc-pas" data-a="rec-pas" data-i="'+i+'" aria-expanded="'+abre+'"><span>'+esc(r.cliente)+(r.folio?' <small>'+esc(r.folio)+'</small>':'')+'</span><span class="rc-chip rc-'+esc(r.estado||'apartado')+'">'+R.estado+'</span><b class="rc-flecha">'+(abre?'▴':'▾')+'</b></button>'+(abre?(ev?'<p class="hint" style="margin:0">'+esc(ev)+'</p>':'')+'<div class="rc-nums"><div><span>Total</span><b>'+fmt(R.total)+'</b></div><div><span>Abonado</span><b>'+fmt(R.abono)+'</b></div><div><span>Saldo</span><b class="'+(R.saldo>0?'rc-debe':'rc-ok')+'">'+fmt(R.saldo)+'</b></div></div>'+due+danosHtml(r,i):'')+'</div>';}
     return '<div class="ed rc">'+
       '<div class="rc-top"><strong>'+(esc(r.cliente)||'Recibo nuevo')+(r.folio?' <small>'+esc(r.folio)+'</small>':'')+'</strong><span class="rc-chip rc-'+esc(r.estado||'apartado')+'">'+R.estado+'</span></div>'+
       (ev?'<p class="hint" style="margin:0">'+esc(ev)+'</p>':'')+
@@ -4100,6 +4102,7 @@ function accionAdmin(a,t){
     case 'st-per':A.stPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-per':A.rtPer=t.dataset.v;renderAdmin(true);break;
     case 'rt-lista':A.rtLista=!A.rtLista;renderAdmin(true);break;
+    case 'rec-pas':A.recPas=A.recPas||{};A.recPas[+t.dataset.i]=!A.recPas[+t.dataset.i];renderAdmin(true);break;
     case 'rt-vista':A.rtVista=t.dataset.v;renderAdmin(true);break;
     case 'rt-cal':A.rtCal=rtMes(A.rtCal||iso(hoy).slice(0,7),+t.dataset.v);A.rtDia='';renderAdmin(true);break;
     case 'rt-dia':A.rtDia=A.rtDia===t.dataset.v?'':t.dataset.v;renderAdmin(true);break;
