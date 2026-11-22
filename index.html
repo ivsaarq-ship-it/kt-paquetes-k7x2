@@ -2415,7 +2415,8 @@ function aplicarCorrecciones(){
 function admRecibos(){
   return '<section class="block rc-pega"><h2 style="margin:0 0 6px">Pega el mensaje del cliente</h2><p class="hint" style="margin:0 0 8px">Su cotización: se aparta la fecha y se arma su recibo solos.</p><label class="field" style="margin:0"><textarea id="rc-nuevo" rows="2" placeholder="Mantén presionado aquí › Pegar" aria-label="Mensaje del cliente">'+esc(pasteBuf['rc-nuevo']||'')+'</textarea></label>'+
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-main sm" data-a="rc-clip">📋 Pegar y armar</button><button type="button" class="btn btn-line sm" data-a="rc-pegar">Listo</button><button type="button" class="btn btn-ghost sm" data-a="recibo-nuevo">Recibo en blanco</button></div></section>'+
-  (REC.length?REC.map(function(r,i){
+  /* 21 nov: los recibos se muestran de la fecha más reciente a la más antigua; sin fecha, al final. Los índices son los de REC. */
+  (REC.length?REC.map(function(r,i){return i;}).sort(function(a,b){var x=fechaISODeTexto(REC[a].fecha)||'',y=fechaISODeTexto(REC[b].fecha)||'';if(x===y)return a-b;if(!x)return 1;if(!y)return -1;return x<y?1:-1;}).map(function(i){var r=REC[i];
     var R=reciboResumen(r),vacio=!r.cliente&&!(r.lineas||[]).length,edit=A.recEdit===i||vacio,mas=A.recMas===i;
     var ev=[r.fecha,reciboPaquete(r),r.invitados?(r.invitados+' inv.'):''].filter(Boolean).join(' · ');
     var due=R.saldo<=0?'<p class="pay-due">Liquidado ✅</p>':'<p class="pay-due'+(!R.lim||R.dias<0?' late':(R.dias<=7?' soon':''))+'">'+esc(limiteTxt(R,true))+'</p>';
