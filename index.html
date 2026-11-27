@@ -684,7 +684,7 @@ function parseCotizacion(txt){
   r.telefono=campo(/\*WhatsApp:\*\s*(.+)/);
   r.notas=campo(/\*Comentarios:\*\s*(.+)/)||campo(/\*Detalles:\*\s*(.+)/);var rIn=campo(/\*Me interesa[^*]*:\*\s*(.+)/);if(rIn)r.notas=(r.notas?r.notas+' · ':'')+'Me interesa (confirmar precio y disponibilidad): '+rIn;
   r.acomodo=campo(/\*Acomodo:\*\s*(.+)/)||campo(/\*Mesas:\*\s*(.+)/);
-  var conocidos=/^(Folio|Fecha|Horario|Evento|Paquete|Acomodo|Mesas|Total estimado|Subtotal|Total|Total con IVA|Anticipo[^:]*|Pago total|Nombre|WhatsApp|Comentarios|Detalles|Nos conoció por|Me interesa.*)$/i,mm,red=/^\*([^*]+):\*\s*(.+)$/gm;r.detalles=[];
+  var conocidos=/^(Folio|Fecha|Horario|Evento|Paquete|Acomodo|Mesas|Total estimado|Subtotal|Total|Total con IVA|Terraza y servicios|IVA[^:]*|Depósito de garantía|Anticipo[^:]*|Pago total|Nombre|WhatsApp|Comentarios|Detalles|Nos conoció por|Me interesa.*)$/i,mm,red=/^\*([^*]+):\*\s*(.+)$/gm;r.detalles=[];
   while((mm=red.exec(txt))){if(!conocidos.test(mm[1].trim()))r.detalles.push(mm[1].trim()+': '+mm[2].trim());}
   return r;
 }
@@ -1783,7 +1783,8 @@ function mensaje(){
   var t='Hola, quiero apartar esta fecha:\n\n';
   t+='*Folio:* '+S.folio+'\n*Fecha:* '+fechaLarga(S.fecha)+', '+S.horario+' h\n';
   t+='*Evento:* '+[S.tipo,S.invitados+' invitados',p?p.nombre:''].filter(Boolean).join(' · ')+'\n';
-  t+='*Subtotal:* '+fmt(c.total)+' (antes de IVA)\n*'+(c.pagoTotal?'Pago total':'Anticipo ('+c.pct+' %)')+':* '+fmt(c.anticipo)+'\n';
+  /* 27 nov, Sergio: terraza y servicios, IVA, depósito y total con IVA, justo después del evento */
+  t+='*Terraza y servicios:* '+fmt(c.subtotal)+'\n*IVA '+ivaPct()+' %:* '+fmt(ivaDeC(c))+'\n*Depósito de garantía:* '+fmt(c.deposito)+'\n*Total con IVA:* '+fmt(conIvaC(c))+'\n';
   if(S.notas.trim())t+='*Comentarios:* '+notasLimpias()+'\n';
   if(interesLista().length)t+='*Me interesa (precio y disponibilidad a confirmar):* '+interesLista().join(', ')+'\n';
   if(tier==='cerca')t+='⚠️ Fecha próxima: apartado de solo '+(+D.reglas.holdHorasCercano||2)+' h.\n';
