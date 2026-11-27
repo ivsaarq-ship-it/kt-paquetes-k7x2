@@ -3725,7 +3725,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
     texto(p.nombre,76,true,true,'#17221C',88);y+=4;
     if(p.descripcion){texto(p.descripcion,34,false,false,'#46564D',46);y+=10;}
     var promoLeyTxt=!pr.chico&&pr.antes?promoLeyenda():'',promoH=promoLeyTxt?44+envolver(promoLeyTxt,26,true,false,iw-72).length*36+6:0;
-    var dpLinR=pr.depM?envolver(reciboDepositoTxt(),26,false,false,iw-72).length:0,dpExtraR=dpLinR>1?(dpLinR-1)*36:0;var bh=pr.chico?170:(30+56+36+36+promoH+(pr.depM?66:0)+28+84+36+22+42+40+44);
+    var dpLinR=pr.depM?envolver(reciboDepositoTxt(),26,false,false,iw-72).length:0,dpExtraR=dpLinR>1?(dpLinR-1)*36:0;var bh=pr.chico?170:(30+56+36+36+promoH+(pr.depM?66:0)+28+84+36+22+42+40+(pr.pagoTotal?0:44));
     function fila(l,m,lp,mp,lh,col,sf){var bl=Math.max(lp,mp);if(real){f(lp,false,false);cx.fillStyle='#46564D';cx.textAlign='left';cx.fillText(l,M+36,y+bl);f(mp,true,sf);cx.fillStyle=col;cx.textAlign='right';cx.fillText(m,W-M-36,y+bl);cx.textAlign='left';}y+=lh;}
     if(real){cx.fillStyle='#FFFFFF';cx.strokeStyle='#E4BE84';cx.lineWidth=3;cx.beginPath();if(cx.roundRect)cx.roundRect(M,y,iw,bh,26);else cx.rect(M,y,iw,bh);cx.fill();cx.stroke();}
     if(pr.chico){var yy=y;y+=30;texto('A cotizar por WhatsApp',58,true,true,'#17221C',70,M+36,iw-72);texto('Para '+inv+' invitados',32,false,false,'#46564D',44,M+36,iw-72);y=yy+bh+34;}
@@ -3740,7 +3740,7 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
       texto(pr.pagoTotal?'Para apartar: pago total':'Para apartar: anticipo de '+fmt(pr.anticipo)+' ('+pr.pct+' %)',26,true,false,'#2B6A58',36,M+36,iw-72);
       y+=8;if(real){cx.fillStyle='#E4BE84';cx.fillRect(M+36,y,iw-72,2);}y+=14;fila('Total con IVA',fmt(Math.round(pr.gran+pr.total*ivaPct()/100)),24,30,42,'#46564D',false);
       /* 27 nov, Sergio: anticipo de 25 % y su monto, en naranja, bajo el total */
-      texto('Anticipo '+(+D.negocio.anticipoPct||25)+' %: '+fmt(Math.round(pr.gran*(+D.negocio.anticipoPct||25)/100)),28,true,false,'#D9730D',38,M+36,iw-72);
+      if(!pr.pagoTotal)texto('Anticipo '+(+D.negocio.anticipoPct||25)+' %: '+fmt(Math.round(pr.gran*(+D.negocio.anticipoPct||25)/100)),28,true,false,'#D9730D',38,M+36,iw-72);
       y=y0+bh+34;}
     texto('Cotización estimada, sujeta a disponibilidad de proveedores.',28,true,false,'#17221C',38);y+=22;
     /* 22 nov, Sergio: leyenda de precios a la fecha de hoy (Guadalajara) */
