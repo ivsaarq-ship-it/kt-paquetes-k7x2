@@ -3739,7 +3739,9 @@ async function dibujarPaqueteImg(p,pr,inv,fecha){
       texto(pr.pagoTotal?'Para apartar: pago total':'Para apartar: anticipo de '+fmt(pr.anticipo)+' ('+pr.pct+' %)',26,true,false,'#2B6A58',36,M+36,iw-72);
       y+=8;if(real){cx.fillStyle='#E4BE84';cx.fillRect(M+36,y,iw-72,2);}y+=14;fila('Total con IVA',fmt(Math.round(pr.gran+pr.total*ivaPct()/100)),24,30,42,'#46564D',false);
       y=y0+bh+34;}
-    if(pr.depM){texto(reciboDepositoTxt(),24,false,false,'#46564D',32);y+=6;}texto('Cotización estimada, sujeta a disponibilidad de proveedores.',28,true,false,'#17221C',38);y+=22;
+    texto('Cotización estimada, sujeta a disponibilidad de proveedores.',28,true,false,'#17221C',38);y+=22;
+    /* 22 nov, Sergio: leyenda de precios a la fecha de hoy (Guadalajara) */
+    texto('Precios al '+fechaLarga(iso(hoyNegocio())).toLowerCase()+', sujetos a cambio sin previo aviso.',28,true,false,'#D9730D',38);y+=22;
     texto('Qué incluye',44,true,true,'#17221C',60);y+=6;
     inc.forEach(function(x){var h=/^todo lo del/i.test(x.trim())||/:$/.test(x.trim());
       if(h){y+=6;texto(x,34,true,false,'#17221C',46);y+=4;}
