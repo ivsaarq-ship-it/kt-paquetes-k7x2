@@ -514,6 +514,9 @@ details summary{cursor:pointer;color:var(--agave);font-weight:600;font-size:.93r
 .adm-add{margin-top:14px}
 .rc{gap:10px}.rc-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.rc-top small{font-weight:400;color:var(--ink-3);font-size:.8rem}.rc-chip{font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--gold-soft);color:var(--ink);white-space:nowrap}.rc-chip.rc-confirmado{background:var(--agave-soft);color:var(--agave)}.rc-chip.rc-pagado{background:var(--agave);color:#fff}.rc-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--surface-2);border-radius:10px;padding:10px}.rc-nums span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:700}.rc-nums b{font-size:1rem;font-variant-numeric:tabular-nums}.rc-debe{color:var(--busy)}.rc-ok{color:var(--agave)}.rc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.rc-act,.rc-mas{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rc-mas{padding-top:6px;border-top:1px dashed var(--line)}.rc-edit{display:grid;gap:10px;padding-top:8px;border-top:1px dashed var(--line)}.rc-det summary{font-size:.9rem}.rc-det[open]{display:grid;gap:10px}
 .rc-mas-wrap{position:relative;height:0;overflow:visible}.rc-mas-wrap .rc-mas{position:absolute;top:2px;right:0;z-index:30;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;gap:2px;width:min(310px,88vw);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px}.rc-mas-wrap .rc-mas .btn{justify-content:flex-start;width:100%;min-height:40px}.rc-mas-wrap .ed-ctl{padding:4px 6px;grid-column:1/-1;flex-wrap:nowrap;gap:6px}.rc-mas-wrap .rc-mas .ed-ctl .btn{width:auto;flex:none;justify-content:center;padding:0 10px}.rc-mas-wrap .ed-ctl .del-q{white-space:nowrap;flex:none}.rc-mas-wrap .rc-mas .btn{font-size:.82rem;padding:0 8px;text-align:left}
+.bar-mic{flex:none;width:44px;height:44px;border-radius:50%;border:0;padding:0;background:#E11D74;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(225,29,116,.45);cursor:pointer;-webkit-tap-highlight-color:transparent}.bar-mic:active{transform:scale(.94)}.bar-mic:focus-visible{outline:3px solid var(--gold);outline-offset:3px}@media (max-width:350px){.bar-mic{width:36px;height:36px}.bar-mic svg{width:21px;height:21px}}.voz-btns{display:flex;gap:8px;margin-top:10px}.voz-btns .btn{flex:1 1 0}
+.resumen{background:var(--night);color:var(--night-ink);border-radius:var(--r);padding:14px 16px;display:grid;gap:4px}.resumen div{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.resumen span{font-size:.9rem;color:var(--night-mute)}.resumen strong{font-size:1.7rem;font-variant-numeric:tabular-nums}.resumen div+div strong{font-size:1.2rem;color:var(--gold)}
+.desglose>summary{padding:12px 16px;border-top:1px dashed var(--line)}.desglose[open]>summary{border-bottom:1px dashed var(--line)}
 .warn{font-size:.85rem;color:var(--ink-2);background:var(--surface-2);border-radius:10px;padding:10px 12px;margin:10px 0 0}
 /* pie de Admin compacto para que el menú «Más» se vea completo */
 .adm-foot{padding-block:6px calc(6px + env(safe-area-inset-bottom,0px))}.adm-foot-in{flex-wrap:nowrap;gap:8px}.adm-foot .adm-status{font-size:.78rem;line-height:1.25;flex:1 1 auto;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.adm-foot .adm-btns{flex:none;flex-wrap:nowrap;gap:4px}.adm-foot .btn.sm{min-height:36px;padding:0 10px;font-size:.82rem}
@@ -1317,6 +1320,91 @@ function planoHTML(){
   return acomodoChips()+fig+extraFig+figJardin+
     '<div class="legend"><span><i class="sw sw-mesa"></i>Mesas para tus invitados</span><span><i class="sw sw-mesa-off"></i>Mesas libres</span></div>';
 }
+/* 27 nov, Sergio: cotizar por voz, para el cliente y para nosotros. Se dicta «Boda el 12 de diciembre para 100 personas a las 7 de la noche, paquete Banquete»
+   y se llenan fecha, invitados, tipo, horario y paquete. Dictado: capacidad «dictation» de Claude, o el reconocimiento de voz del navegador (Chrome), o el micrófono del teclado. */
+var VOZ={abierto:false,txt:'',msg:'',d:undefined,rec:null,oye:false,base:'',fin:'',par:''};
+function vozNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+var VOZ_U={uno:1,primero:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiun:21,veintiuno:21,veintidos:22,veintitres:23,veinticuatro:24,veinticinco:25,veintiseis:26,veintisiete:27,veintiocho:28,veintinueve:29,treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90,cien:100,ciento:100,doscientos:200,doscientas:200};
+function vozNumeros(t){
+  var w=t.split(' '),out=[],acc=null;
+  for(var i=0;i<w.length;i++){var x=w[i];
+    if(x==='y'&&acc!==null&&VOZ_U.hasOwnProperty(w[i+1]||''))continue;
+    if(VOZ_U.hasOwnProperty(x)){acc=(acc===null?0:acc)+VOZ_U[x];continue;}
+    if(acc!==null){out.push(String(acc));acc=null;}
+    out.push(x);}
+  if(acc!==null)out.push(String(acc));
+  return out.join(' ');
+}
+var VOZ_M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function vozEntender(txt){
+  var t=vozNumeros(vozNorm(txt).replace(/setiembre/g,'septiembre').replace(/[,;¿?¡!]/g,' ').replace(/\.(?!\d)/g,' ').replace(/\s+/g,' ').trim()),r={},dia=0,mes=-1,ano=null;
+  var mm=new RegExp('\\b(\\d{1,2})\\s*(?:de\\s+)?('+VOZ_M.join('|')+')(?:\\s+(?:de|del)?\\s*(\\d{4}))?').exec(t);
+  if(mm){dia=+mm[1];mes=VOZ_M.indexOf(mm[2]);ano=mm[3]?+mm[3]:null;}
+  else{var mn=/\b(\d{1,2})\s*\/\s*(\d{1,2})(?:\s*\/\s*(\d{2,4}))?\b/.exec(t);if(mn){dia=+mn[1];mes=+mn[2]-1;ano=mn[3]?(+mn[3]<100?2000+(+mn[3]):+mn[3]):null;}}
+  if(dia&&mes>=0&&mes<12){var y=ano||hoy.getFullYear(),f=new Date(y,mes,dia);if(!ano&&f<hoy)f=new Date(y+1,mes,dia);if(f.getMonth()===mes&&f.getDate()===dia)r.fecha=iso(f);}
+  var mi=/\b(\d{1,3})\s*(?:personas|invitados|invitadas|gentes?|pax|asistentes|adultos)\b/.exec(t)||/\bpara\s+(\d{1,3})\b(?!\s*(?:de|del)\s)/.exec(t);
+  if(mi)r.invitados=+mi[1];
+  var mh=/\ba\s+las?\s+(\d{1,2})(?:\s*(?::|y)\s*(\d{2}|media))?\s*(?:h|hrs|horas)?\s*(?:de\s+la\s+|en\s+la\s+|por\s+la\s+)?(manana|tarde|noche|am|pm|p\s?m|a\s?m)?/.exec(t);
+  if(mh){var h=+mh[1],m2=mh[2]==='media'?30:(+mh[2]||0),pr=mh[3]||'';if((/tarde|noche|pm|p m/.test(pr)||!pr)&&h>=1&&h<12)h+=12;var hh=(h<10?'0':'')+h+':'+(m2<10?'0':'')+m2;if(D.horarios.indexOf(hh)>=0)r.horario=hh;}
+  var tipos=D.tiposEvento||[],syn=[[/\bxv\b|15 anos|quinceanera/,'xv'],[/cumple/,'cumple'],[/\bboda|casamiento/,'boda'],[/bautiz|comunion/,'bautiz'],[/graduaci|egresad/,'gradua'],[/empresa|corporativ/,'empres']];
+  for(var i=0;i<syn.length&&!r.tipo;i++)if(syn[i][0].test(t)){var k=syn[i][1];r.tipo=tipos.find(function(x){return vozNorm(x).indexOf(k)>=0;})||undefined;}
+  D.paquetes.filter(function(p){return p.activo!==false;}).forEach(function(p){var n=vozNorm(p.nombre).replace(/^paquete\s+/,'').trim();if(!r.paquete&&n&&(' '+t+' ').indexOf(' '+n+' ')>=0)r.paquete=p.id;});
+  if(!r.paquete&&/todo incluido|completo/.test(t)){var pt=pkg('todo');if(pt&&pt.activo!==false)r.paquete='todo';}
+  return r;
+}
+function vozTexto(){return [VOZ.base,VOZ.fin,VOZ.par].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();}
+function vozPinta(){VOZ.txt=vozTexto();var e=document.getElementById('voz-txt');if(e)e.value=VOZ.txt;var b=app.querySelector('[data-voz-mic]');if(b){b.textContent=VOZ.oye?'⏹ Detener':'🎤 Hablar';b.className='btn '+(VOZ.oye?'btn-main':'btn-line');}}
+function vozMsg(){var m=document.getElementById('voz-msg');if(m)m.textContent=VOZ.msg||'';}
+function vozPrep(){
+  if(VOZ.d!==undefined)return;VOZ.d=null;
+  try{if(window.claude&&typeof window.claude.use==='function')window.claude.use('dictation').then(function(d){if(!d)return;VOZ.d=d;
+    d.onPartial(function(o){VOZ.par=(o&&o.text)||'';vozPinta();});
+    d.onFinal(function(o){VOZ.fin=(VOZ.fin?VOZ.fin+' ':'')+((o&&o.text)||'');VOZ.par='';vozPinta();});
+    d.onState(function(o){VOZ.oye=!!o&&o.state==='listening';vozPinta();});}).catch(function(){});}catch(e){}
+}
+function vozMic(){
+  var ta=document.getElementById('voz-txt');
+  if(VOZ.oye){if(VOZ.d){try{VOZ.d.stop().catch(function(){});}catch(e){}}else if(VOZ.rec){try{VOZ.rec.stop();}catch(e){}}return;}
+  VOZ.base=ta?ta.value.trim():'';VOZ.fin='';VOZ.par='';VOZ.msg='';vozMsg();
+  if(VOZ.d){var pr=null;try{pr=VOZ.d.start();}catch(e){pr=null;}
+    if(pr&&pr.catch)pr.catch(function(err){VOZ.oye=false;VOZ.msg=(err&&err.code==='not_granted')?'Sin permiso de micrófono: usa el micrófono de tu teclado o escribe.':'No se pudo usar el micrófono: intenta otra vez o escribe.';vozMsg();vozPinta();});
+    return;}
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){try{var r=new SR();r.lang='es-MX';r.interimResults=true;r.continuous=true;
+    r.onresult=function(ev){var fin='',par='';for(var i=0;i<ev.results.length;i++){var x=ev.results[i];if(x.isFinal)fin+=x[0].transcript+' ';else par+=x[0].transcript;}VOZ.fin=fin.trim();VOZ.par=par;vozPinta();};
+    r.onend=function(){VOZ.oye=false;VOZ.rec=null;vozPinta();};
+    r.onerror=function(ev){VOZ.oye=false;VOZ.msg=(ev&&ev.error==='not-allowed')?'Sin permiso de micrófono: usa el micrófono de tu teclado o escribe.':'No se pudo escuchar: intenta otra vez o escribe.';vozMsg();vozPinta();};
+    VOZ.rec=r;r.start();VOZ.oye=true;vozPinta();return;}catch(e){VOZ.rec=null;}}
+  VOZ.msg='Toca el micrófono 🎤 de tu teclado y dicta tu evento.';vozMsg();if(ta)ta.focus();
+}
+function vozAplicar(){
+  var ta=document.getElementById('voz-txt'),txt=ta?ta.value:VOZ.txt;VOZ.txt=txt;
+  if(VOZ.oye)vozMic();
+  if(!String(txt||'').trim()){VOZ.msg='Dicta o escribe tu evento primero.';vozMsg();return;}
+  var r=vozEntender(txt),ok=[],falta=[],nota='',fechaOk=false;
+  if(r.fecha){if(disponible(r.fecha)){S.fecha=r.fecha;var d=parse(r.fecha);S.mes=iso(new Date(d.getFullYear(),d.getMonth(),1));ok.push(fechaLarga(r.fecha));fechaOk=true;}else nota='El '+fechaLarga(r.fecha).toLowerCase()+' no está disponible: elige otra fecha. ';}else falta.push('la fecha');
+  if(r.tipo){S.tipo=r.tipo;ok.push(r.tipo);}
+  if(r.invitados){setInv(r.invitados);ok.push(S.invitados+' invitados');}else falta.push('cuántos invitados');
+  if(r.horario){S.horario=r.horario;ok.push(r.horario+' h');}
+  VOZ.msg=(ok.length?'Entendí: '+ok.join(' · ')+'. ':'')+nota+(falta.length?'Falta '+falta.join(' y ')+'.':'');
+  guardar();
+  if(!fechaOk){render();vozMsg();return;}
+  VOZ.abierto=false;S.step=r.invitados?2:1;
+  if(r.paquete){var p=pkg(r.paquete),bloq=!p||soloBasico(p)||(p.minComida&&S.invitados<minPaxComidaDia(S.fecha));
+    if(!bloq){S.step=2;if((+D.negocio.depositoGarantia||0)>0&&!esContactoChico())pkgConfirm=r.paquete;else{aplicarPaquete(r.paquete);S.step=3;}}}
+  guardar();render();arriba();toast(VOZ.msg);
+}
+/* 27 nov, Sergio: «nomás el microfonito… abajo a la derecha, en un color vibrante, que no se sobreponga con ningún texto»: botón redondo dentro de la barra de abajo, junto al de WhatsApp */
+var MIC_SVG='<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>';
+function vozFab(){return '<button type="button" class="bar-mic" data-voz-fab aria-label="Cotizar con tu voz" title="Cotiza con tu voz">'+MIC_SVG+'</button>';}
+function vozHtml(){
+  if(!VOZ.abierto)return '';
+  return '<div class="modal-cal voz-modal" role="dialog" aria-modal="true" aria-label="Cotiza con tu voz"><div class="modal-cal-card"><div class="modal-cal-head"><h3>Dime tu evento</h3><button type="button" class="btn btn-ghost sm" data-voz-cerrar aria-label="Cerrar">✕</button></div>'+
+    '<p class="hint" style="margin:0 0 8px">Ej.: «Boda el 12 de diciembre para 100 personas a las 7 de la noche, paquete Banquete».</p>'+
+    '<label class="field" style="margin:0"><textarea id="voz-txt" rows="3" placeholder="Habla o escribe aquí" aria-label="Tu evento">'+esc(VOZ.txt)+'</textarea></label>'+
+    '<div class="voz-btns"><button type="button" class="btn '+(VOZ.oye?'btn-main':'btn-line')+'" data-voz-mic>'+(VOZ.oye?'⏹ Detener':'🎤 Hablar')+'</button><button type="button" class="btn btn-main" data-voz-ok>Armar mi cotización</button></div>'+
+    '<p class="hint" id="voz-msg" aria-live="polite">'+esc(VOZ.msg||'')+'</p></div></div>';
+}
 function v0(){
   var sats=proximosSabados(4);
   var check='<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="14" fill="var(--gold)"/><path d="M8.5 14.5l3.6 3.6 7.4-8" fill="none" stroke="var(--gold-ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -1506,7 +1594,7 @@ async function pqGuardarPDF(R,nota){
   finally{pqBusy=false;}
 }
 function provExt(id){return (D.proveedoresExt||[]).find(function(x){return x.id===id;});}
-/* Extras de proveedor sin precio (Sergio, 15 nov): el cliente marca «Me interesa» y todo va en un solo mensaje; Kalli confirma precio y disponibilidad. */ function interesSel(){var o=S.interes||{};return Object.keys(o).filter(function(k){var it=item(k);return o[k]&&it&&it.activo!==false;});} function interesLista(){return interesSel().map(function(k){var it=item(k);return it.nombreCorto||it.nombre;});} function interesBtn(id){var on=!!(S.interes&&S.interes[id]);return '<button type="button" class="btn tog '+(on?'btn-chosen':'btn-line')+'" data-interes="'+esc(id)+'" aria-pressed="'+on+'">'+(on?'En tu lista ✓':'Me interesa')+'</button>';} function interesAviso(){var l=interesLista();return '<p class="fine interes-aviso">Servicios de proveedores: sujetos a disponibilidad del proveedor. Marca <b>«Me interesa»</b> y van en tu mismo mensaje de WhatsApp; te confirmamos precio y disponibilidad.'+(l.length?'<br><b>Tu lista:</b> '+esc(l.join(', ')):'')+'</p>';} function waInfoUrl(n){var kw=String(D.negocio.whatsapp||'').replace(/\D/g,'');return kw?'https://wa.me/'+kw+'?text='+encodeURIComponent('Hola, '+D.negocio.nombre+'. Quiero información de '+n+' para mi evento'+(S.fecha?' del '+fechaLarga(S.fecha):'')+'.'):'';}
+/* Extras de proveedor sin precio (Sergio, 15 nov): el cliente marca «Me interesa» y todo va en un solo mensaje; Kalli confirma precio y disponibilidad. */ function interesSel(){var o=S.interes||{};return Object.keys(o).filter(function(k){var it=item(k);return o[k]&&it&&it.activo!==false;});} function interesLista(){return interesSel().map(function(k){var it=item(k);return it.nombreCorto||it.nombre;});} function interesBtn(id){var on=!!(S.interes&&S.interes[id]);return '<button type="button" class="btn tog '+(on?'btn-chosen':'btn-line')+'" data-interes="'+esc(id)+'" aria-pressed="'+on+'">'+(on?'En tu lista ✓':'Me interesa')+'</button>';} function interesAviso(){var l=interesLista();return '<p class="fine interes-aviso">Precios sujetos a cambio y a disponibilidad de proveedores. Marca <b>«Me interesa»</b> y te confirmamos.'+(l.length?'<br><b>Tu lista:</b> '+esc(l.join(', ')):'')+'</p>';} function waInfoUrl(n){var kw=String(D.negocio.whatsapp||'').replace(/\D/g,'');return kw?'https://wa.me/'+kw+'?text='+encodeURIComponent('Hola, '+D.negocio.nombre+'. Quiero información de '+n+' para mi evento'+(S.fecha?' del '+fechaLarga(S.fecha):'')+'.'):'';}
 function provCard(pv){
   var wu='';
   var btns=wu?'<a class="btn btn-line sm" href="'+wu+'" target="_blank" rel="noopener">Pedir información con '+esc(D.negocio.nombre)+'</a>':'';
@@ -1558,7 +1646,7 @@ function v3(){
   var destIds=((D.reglas||{}).extrasDestacados||[]).map(function(d){return d.id;}),destL=[];
   D.items.filter(function(i){return i.activo!==false&&(visibleEnPaquete(i,p)||(i.id==='refresco-hielo'&&destIds.indexOf(i.id)>=0&&!autoDelPaquete(i,p)))&&!extraCercaBloq(i);}).forEach(function(i){if(destIds.indexOf(i.id)>=0){destL.push(i);return;}var cn=esMejora(i)?'Mejora tu comida':i.categoria;var c=cats.find(function(c){return c.n===cn;});if(!c){c={n:cn,l:[]};cats.push(c);}c.l.push(i);});
   var nav=cats.length>1?'<div class="chips cat-nav">'+cats.map(function(c){return '<button type="button" class="chip sm" data-catgo="'+esc('cat-'+c.n)+'" data-catid="cat-'+slug(c.n)+'">'+esc(c.n)+'</button>';}).join('')+'</div>':'';
-  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Precios para tus '+inv+' invitados, antes de IVA. Lo incluido ya viene marcado.</p>'+interesAviso()+(tierFecha(S.fecha)==='cerca'?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días solo mostramos los servicios de la terraza. Música, comida, decoración y demás proveedores necesitan más anticipación; si los necesitas, llámanos y vemos si alguno está libre.</p>':'')+nav+'</section>'+(function(){var l=destL.filter(extraOk).sort(function(a,b){return destIds.indexOf(a.id)-destIds.indexOf(b.id);});return l.length?'<section class="block destacados"><h2>Lo más pedido</h2><div class="items">'+l.map(function(i){return itemRow(i,p,inv,true);}).join('')+'</div></section>':'';})()+
+  return '<section class="intro intro-sm"><h1>Proveedores y extras</h1><p>Precios para '+inv+' invitados, antes de IVA. Lo incluido ya viene marcado.</p>'+interesAviso()+(tierFecha(S.fecha)==='cerca'?'<p class="fine fine-urgent">Para fechas a menos de '+(+D.reglas.diasLiquidacionTotal||7)+' días solo mostramos los servicios de la terraza. Música, comida, decoración y demás proveedores necesitan más anticipación; si los necesitas, llámanos y vemos si alguno está libre.</p>':'')+nav+'</section>'+(function(){var l=destL.filter(extraOk).sort(function(a,b){return destIds.indexOf(a.id)-destIds.indexOf(b.id);});return l.length?'<section class="block destacados"><h2>Lo más pedido</h2><div class="items">'+l.map(function(i){return itemRow(i,p,inv,true);}).join('')+'</div></section>':'';})()+
     cats.map(function(c,ci){
       var visibles=c.l.filter(extraOk);
       var relevante=ci===0||(ci===1&&cats[0].n==='Estilo de banquete');
@@ -1588,11 +1676,11 @@ function v3(){
             h+='<details class="item-menu" data-cat="'+esc(mk)+'"'+(ab?' open':'')+'><summary><span class="im-t">'+esc(menu)+(eleg?' <span class="cat-badge">'+eleg+' elegido'+(eleg>1?'s':'')+'</span>':'')+'</span><span class="im-s">'+esc(it.menuTxt||(del.length+' opciones'))+(desde?' · desde '+fmt(desde):'')+'</span></summary><div class="items">';}
           if(it.prov&&!vistos[it.prov]){vistos[it.prov]=1;var pv=provExt(it.prov);if(pv)h+=provCard(pv);}
           h+=itemRow(it,p,inv);});
-        cerrar();return h;})()+'</div>'+(c.l.some(esMejora)?'<p class="hint" style="margin-top:10px">Tu paquete incluye comida de hasta '+fmt(+D.reglas.comidaMax||150)+' por persona. Estos menús cuestan más: al elegir uno, tu total se ajusta. Precio informativo: puede cambiar por el proveedor sin previo aviso; te confirmamos por WhatsApp.</p>':(c.l.some(function(x){return x.grupo==='comida-banquete';})?'<p class="hint" style="margin-top:10px">Precios de la comida informativos: pueden cambiar por el proveedor sin previo aviso. Una vez confirmado precio y disponibilidad con el proveedor, te avisamos por WhatsApp.</p>':''))+
+        cerrar();return h;})()+'</div>'+(c.l.some(esMejora)?'<p class="hint" style="margin-top:10px">Tu paquete incluye comida de hasta '+fmt(+D.reglas.comidaMax||150)+' por persona; estos menús ajustan tu total.</p>':'')+
         avisos.map(function(){return '<p class="hint" style="margin-top:10px">Para '+inv+' invitados no tenemos una opción de sonido configurada en la app. Escríbenos por WhatsApp al enviar tu cotización y te armamos algo a la medida.</p>';}).join('')+
       '</details>';
     }).join('')+
-    '<p class="aviso-ext">Los precios son informativos y pueden cambiar sin previo aviso: dependen de cada proveedor y de que tenga libre tu fecha. Los extras son de proveedores externos; antes de apartar te confirmamos precio y disponibilidad por WhatsApp.</p>';
+    '';
 }
 function v4Chico(){
   var R=D.reglas;
@@ -1640,7 +1728,9 @@ function v4(){
     '</div>':'';
   var pago=link?'Transferencia o pago en línea. Concepto: tu folio.':esc(n.nombre)+' te manda los datos de pago por WhatsApp. Concepto: tu folio.';
   var mapa=esc(mapsLink());
-  return '<section class="intro intro-sm"><h1>Tu cotización</h1><p>Revísala, escribe tus datos y envíala por WhatsApp.</p></section>'+
+  return '<section class="intro intro-sm"><h1>Tu cotización</h1><p>Escribe tus datos y envíala por WhatsApp.</p></section>'+
+  /* 27 nov, Sergio: «más sencillo»: arriba lo importante; el desglose plegado */
+  '<section class="resumen" aria-label="Resumen"><div><span>Total con IVA</span><strong>'+fmt(conIvaC(c))+'</strong></div><div><span>'+(c.pagoTotal?'Pago total para apartar':'Anticipo para apartar ('+pct+'\u00a0%)')+'</span><strong>'+fmt(c.anticipo)+'</strong></div></section>'+
   '<section class="block"><h2>Tus datos</h2><div class="form">'+
     '<label class="field">Nombre completo<input id="f-nombre" enterkeyhint="done" autocomplete="name" maxlength="60" value="'+esc(S.nombre)+'"></label>'+
     '<label class="field">Tu WhatsApp<input id="f-tel" type="tel" inputmode="tel" enterkeyhint="done" autocomplete="tel" placeholder="33 1234 5678" value="'+esc(S.telefono)+'"></label>'+
@@ -1651,8 +1741,9 @@ function v4(){
       '<div><dt>Fecha</dt><dd>'+fechaLarga(S.fecha)+'</dd></div>'+
       '<div><dt>Horario</dt><dd>'+htmlMarcas(marcaRegalo(horarioTexto()))+'</dd></div>'+
       '<div><dt>Evento</dt><dd>'+(S.tipo?esc(S.tipo)+' · ':'')+S.invitados+' invitados</dd></div>'+
-      '<div><dt>Lugar</dt><dd>'+esc(n.nombre)+'<small>'+esc(n.direccion)+' · <a href="'+mapa+'" target="_blank" rel="noopener">Ver mapa</a></small></dd></div>'+
+      '<div><dt>Lugar</dt><dd>'+esc(n.nombre)+' · <a href="'+mapa+'" target="_blank" rel="noopener">Ver mapa</a></dd></div>'+
     '</dl>'+
+    '<details class="desglose"><summary>Ver desglose</summary>'+
     '<div class="t-lines"><table class="lines"><tbody>'+rows+'</tbody></table></div>'+
     opcTicketHTML()+
     (interesLista().length?'<p class="fine interes-t"><b>Me interesa</b> (te confirmamos precio y disponibilidad por WhatsApp): '+esc(interesLista().join(', '))+'</p>':'')+
@@ -1661,6 +1752,7 @@ function v4(){
     '<div class="pp-line"><span>Total con IVA</span><strong>'+fmt(conIvaC(c))+'</strong></div>'+
     ((pkg(S.paquete)||{}).comida&&S.invitados>0?'<div class="pp-line"><span>Por persona</span><strong>'+fmt(Math.ceil(c.subtotal/S.invitados))+'</strong></div>':'')+
     '<div class="anti"><span>'+(c.pagoTotal?'Pago total para apartar':'Anticipo para apartar ('+pct+'\u00a0%)')+'</span><strong>'+fmt(c.anticipo)+'</strong></div>'+
+    '</details>'+
     (n.notaPrecios?'<p class="fine">'+esc(n.notaPrecios)+'</p>':'')+
     '<p class="fine'+(tier==='cerca'?' fine-urgent':'')+'">'+(
       tier==='lejos'?'Al confirmarte, apartamos tu fecha '+(+D.reglas.holdHoras||12)+' horas para que pagues el anticipo.':
@@ -1682,8 +1774,8 @@ function v4(){
   estadoExtrasHtml()+
   '<section class="block"><h2>Cómo apartas tu fecha</h2><ol class="how">'+
     '<li><div><strong>Mandas tu cotización.</strong><span>Te confirmamos si la fecha está libre.</span></div></li>'+
-    '<li><div><strong>'+(c.pagoTotal?'Pagas el total de '+fmt(c.anticipo)+'.':'Pagas el anticipo de '+fmt(c.anticipo)+'.')+'</strong><span>'+pago+' Manda por el mismo chat la foto del comprobante y tu INE (frente y reverso).</span></div></li>'+
-    '<li><div><strong>Tu fecha queda apartada.</strong><span>Te mandamos tu recibo y tu contrato. Folio '+esc(S.folio)+'.</span></div></li>'+
+    '<li><div><strong>'+(c.pagoTotal?'Pagas el total de '+fmt(c.anticipo)+'.':'Pagas el anticipo de '+fmt(c.anticipo)+'.')+'</strong><span>Te mandamos los datos de pago por WhatsApp.</span></div></li>'+
+    '<li><div><strong>Tu fecha queda apartada.</strong><span>Te mandamos recibo y contrato.</span></div></li>'+
   '</ol>'+(link?'<a class="btn btn-line pay-link" href="'+esc(n.linkPago)+'" target="_blank" rel="noopener">Pagar '+(c.pagoTotal?'el total':'anticipo')+' en línea</a>':'')+'</section>'+
   '<section class="block" id="terminos"><h2>Términos y reglamento</h2><p class="hint" style="margin:0 0 10px">Van en tu contrato.</p>'+
   '<div class="buzon" style="padding:0"><details data-ig="tyc"'+(igOpen.tyc?' open':'')+'><summary>📄 Términos y condiciones</summary><ul class="terms">'+
@@ -1725,7 +1817,7 @@ function bar(){
     '<button type="button" class="bar-sum bar-sum-btn" data-open-cal aria-label="Cambiar fecha, actualmente '+esc(fechaLarga(S.fecha))+'"><span class="bar-l">'+l+' <span class="bar-edit" aria-hidden="true">· cambiar ✎</span></span><strong class="bar-v">'+v+'</strong></button>':
     '<div class="bar-sum"><span class="bar-l">'+l+'</span><strong class="bar-v">'+v+'</strong></div>';
   var tyc=(S.step===4&&!esContactoChico()&&!avisoPendiente())?'<div class="wrap"><label class="bar-terms'+(S.terms?'':' terms-miss')+'"><input type="checkbox" id="f-terms"'+(S.terms?' checked':'')+'><span>Acepto los términos y condiciones. <button type="button" class="btn btn-ghost sm" style="min-height:0;padding:0 4px;text-decoration:underline" data-goterms>Leer más</button></span></label></div>':'';
-  return '<div class="bar">'+tyc+'<div class="wrap bar-in">'+sum+fabWa()+'<div class="bar-act">'+(S.step>0?'<button type="button" class="btn btn-ghost bk" data-back aria-label="Atrás"><svg class="bk-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="bk-t">Atrás</span></button>':'')+prim+'</div></div></div>'+(calOpen?calModal():'');
+  return '<div class="bar">'+tyc+'<div class="wrap bar-in">'+sum+fabWa()+vozFab()+'<div class="bar-act">'+(S.step>0?'<button type="button" class="btn btn-ghost bk" data-back aria-label="Atrás"><svg class="bk-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="bk-t">Atrás</span></button>':'')+prim+'</div></div></div>'+(calOpen?calModal():'');
 }
 function calModal(){
   return '<div class="modal-cal" role="dialog" aria-modal="true" aria-label="Cambiar fecha"><div class="modal-cal-card">'+
@@ -1737,7 +1829,7 @@ function calModal(){
 function render(focusSel){
   if(S.items&&ajustarMeseros()&&S.step===3)setTimeout(avisoMeseros,50);
   if(S.items&&S.items['refresco-hielo']&&!refrescoOk())delete S.items['refresco-hielo'];
-  app.innerHTML=header()+'<main class="wrap stack" id="main">'+[v0,v1,v2,v3,v4][S.step]()+'</main>'+footer()+bar()+(pkgConfirm?depositoModal(pkgConfirm):'');
+  app.innerHTML=header()+'<main class="wrap stack" id="main">'+[v0,v1,v2,v3,v4][S.step]()+'</main>'+footer()+bar()+(pkgConfirm?depositoModal(pkgConfirm):'')+vozHtml();
   guardar();
   if(S.step===4)updateSend();
   aplicarRojo();
@@ -1963,6 +2055,10 @@ app.addEventListener('click',function(e){
   if(ds.go!==undefined){if(+ds.go>S.step){var fg=faltante();if(fg){irAFalta(fg);return;}}S.step=+ds.go;render();arriba();return;}
   if('next' in ds){var fl=faltante();if(fl){irAFalta(fl);return;}S.step=Math.min(4,S.step+1);render();arriba();return;}
   if('back' in ds){S.step=Math.max(0,S.step-1);render();arriba();return;}
+  if('vozFab' in ds){VOZ.abierto=true;VOZ.msg='';render();vozMic();return;}
+  if('vozCerrar' in ds){if(VOZ.oye)vozMic();VOZ.abierto=false;render();return;}
+  if('vozMic' in ds){vozMic();return;}
+  if('vozOk' in ds){vozAplicar();return;}
   if('avisoOk' in ds){avisoVisto=S.fecha;render();arriba();return;}
   if('openCal' in ds){calOpen=true;render();return;}
   if('calClose' in ds){calOpen=false;render();return;}
@@ -2046,6 +2142,7 @@ app.addEventListener('click',function(e){
 });
 app.addEventListener('input',function(e){
   var t=e.target;
+  if(t.id==='voz-txt'){VOZ.txt=t.value;return;}
   if(t.id==='pq-tel'){pqTel=t.value;var pw=document.getElementById('pq-wa');if(pw)pw.href=pqWaHref();return;}
   if(t.id==='inv'){var v=parseInt(t.value,10);if(!isNaN(v)&&v>0){S.invitados=Math.min(capacidad(),v);var h=document.getElementById('inv-hint');if(h)h.textContent=invHint();var pl=document.getElementById('plano');if(pl)pl.innerHTML=planoHTML();updBar();guardar();}return;}
   if(t.id==='f-sug'){sugTxt=t.value;var sa=document.getElementById('sug-wa');if(sa)sa.href=sugUrl();return;}
@@ -4440,6 +4537,7 @@ try{var tmq=localStorage.getItem('kalli-tema');if(tmq==='dark'||tmq==='light')do
 aplicarCorrecciones();
 render();
 iniciarAdmin();
+vozPrep();
 })();
 </script>
 </body>
